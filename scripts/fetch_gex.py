@@ -164,12 +164,6 @@ def compute_chain(tk, spot, max_expiries=8):
         "call_put_oi": {k: {"c": round(v["c"], 1), "p": round(v["p"], 1)} for k, v in sorted(cp_oi.items(), key=lambda x: float(x[0]))},
         "call_put_volume": {k: {"c": round(v["c"], 1), "p": round(v["p"], 1)} for k, v in sorted(cp_vol.items(), key=lambda x: float(x[0]))},
         # total call/put split across all loaded expiries
-        "call_put_totals": {
-            "call_oi": round(sum(v for k, v in oi_call.items()), 1),
-            "put_oi": round(sum(v for k, v in oi_put.items()), 1),
-            "call_vol": round(sum(v for k, v in vol_call.items()), 1),
-            "put_vol": round(sum(v for k, v in vol_call.items()), 1),
-        },
         "expirations_used": expirations[:max_expiries],
         "by_expiry": {
             exp: {
