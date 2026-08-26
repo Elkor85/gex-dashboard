@@ -1,0 +1,38 @@
+name: Update GEX data
+
+on:
+  schedule:
+    # Every 5 minutes during US market hours (Mon-Fri, 13:30-20:00 UTC)
+    - cron: '*/5 13-19 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gex-update
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: pip install yfinance pandas numpy
+
+      - name: Fetch & compute GEX
+        run: python scripts/fetch_gex.py
+
+      - name: Commit data
+        run: |
+          git config user.name "gex-bot"
+          git config user.email "actions@github.com"
+          git add docs/data/gex_data.json
+          git diff --cached --quiet || git commit -m "data: auto-update $(date -u +%FT%TZ)"
+          git push
