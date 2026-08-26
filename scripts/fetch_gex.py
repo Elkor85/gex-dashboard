@@ -71,6 +71,8 @@ def compute_chain(tk, spot, max_expiries=8):
     gex_matrix = {}  # {expiry: {strike_str: gex}} for the heatmap
     dex_matrix, vex_matrix, theta_matrix = {}, {}, {}
     iv_matrix, vol_matrix, oi_matrix = {}, {}, {}
+    cp_oi = {}    # {strike: {'c':oi,'p':oi}} call/put split
+    cp_vol = {}   # {strike: {'c':vol,'p':vol}}
     totals_by_expiry = {}  # {exp: {'total_gex':..,'daily_theta':..,'zero_gamma':..,'call_wall':..,'put_wall':..}}
 
     now = dt.datetime.now(dt.timezone.utc)
@@ -125,6 +127,10 @@ def compute_chain(tk, spot, max_expiries=8):
                 theta_matrix.setdefault(exp, {})[ks] = theta_matrix.get(exp, {}).get(ks, 0) + th_ex
                 vol_matrix.setdefault(exp, {})[ks] = vol_matrix.get(exp, {}).get(ks, 0) + vol
                 oi_matrix.setdefault(exp, {})[ks] = oi_matrix.get(exp, {}).get(ks, 0) + oi
+                slotc = cp_oi.setdefault(ks, {"c": 0.0, "p": 0.0})
+                slotc["c" if kind == "call" else "p"] += oi
+                slotv = cp_vol.setdefault(ks, {"c": 0.0, "p": 0.0})
+                slotv["c" if kind == "call" else "p"] += vol
 
     # per-expiry totals from the matrices
     for exp, smap in gex_matrix.items():
@@ -155,6 +161,15 @@ def compute_chain(tk, spot, max_expiries=8):
         "volume_by_strike": strike_dict(vol_by_strike),
         "oi_by_strike": strike_dict(oi_by_strike),
         "gex_matrix": {exp: strike_dict(strikes_d) for exp, strikes_d in sorted(gex_matrix.items())},
+        "call_put_oi": {k: {"c": round(v["c"], 1), "p": round(v["p"], 1)} for k, v in sorted(cp_oi.items(), key=lambda x: float(x[0]))},
+        "call_put_volume": {k: {"c": round(v["c"], 1), "p": round(v["p"], 1)} for k, v in sorted(cp_vol.items(), key=lambda x: float(x[0]))},
+        # total call/put split across all loaded expiries
+        "call_put_totals": {
+            "call_oi": round(sum(v for k, v in oi_call.items()), 1),
+            "put_oi": round(sum(v for k, v in oi_put.items()), 1),
+            "call_vol": round(sum(v for k, v in vol_call.items()), 1),
+            "put_vol": round(sum(v for k, v in vol_call.items()), 1),
+        },
         "expirations_used": expirations[:max_expiries],
         "by_expiry": {
             exp: {
@@ -276,6 +291,10 @@ def main():
                 "zero_gamma": d.get("zero_gamma"),
                 "call_wall": d.get("call_wall"),
                 "put_wall": d.get("put_wall"),
+                "call_oi": round(sum(v["c"] for v in (d.get("call_put_oi") or {}).values()), 0),
+                "put_oi": round(sum(v["p"] for v in (d.get("call_put_oi") or {}).values()), 0),
+                "call_vol": round(sum(v["c"] for v in (d.get("call_put_volume") or {}).values()), 0),
+                "put_vol": round(sum(v["p"] for v in (d.get("call_put_volume") or {}).values()), 0),
             }
             for label, d in result["tickers"].items()
             if "error" not in d

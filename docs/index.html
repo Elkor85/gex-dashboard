@@ -139,6 +139,7 @@ footer a{color:var(--mut)}
 
     <div class="card c4"><h3>IV Term Structure by Strike</h3><div class="cw h230"><canvas id="ivC"></canvas></div></div>
     <div class="card c4"><h3>Open Interest Walls</h3><div class="cw h230"><canvas id="oiC"></canvas></div></div>
+    <div class="card c4"><h3>Call vs Put — OI & Volume by Strike <small>grouped bars</small></h3><div class="cw h230"><canvas id="cpSplitC"></canvas></div></div>
     <div class="card c4"><h3>Net GEX per Expiry</h3><div class="cw h230"><canvas id="expC"></canvas></div></div>
 
     <div class="card c12">
@@ -342,6 +343,9 @@ function render(){
   const ch=$('chips');
   if(!d||d.error){ch.innerHTML='<div class="chip"><div class="cl">'+CUR+'</div><div class="cv neg">error</div></div>';return;}
   SPOT=d.spot;
+  const cpt={call_oi:0,put_oi:0,call_vol:0,put_vol:0};
+  for(const v of Object.values(d.call_put_oi||{})){cpt.call_oi+=v.c;cpt.put_oi+=v.p;}
+  for(const v of Object.values(d.call_put_volume||{})){cpt.call_vol+=v.c;cpt.put_vol+=v.p;}
   const regime=d.total_gex>=0
     ?'<span class="pos">▲ POSITIVE γ · volatility suppressed</span>'
     :'<span class="neg">▼ NEGATIVE γ · volatility amplified</span>';
@@ -352,7 +356,9 @@ function render(){
    <div class="chip"><div class="cl"><span class="sw" style="background:var(--yel)"></span>HVL</div><div class="cv yel">${highestVol(d)??'—'}</div><div class="cs">highest volume strike</div></div>
    <div class="chip"><div class="cl"><span class="sw" style="background:var(--grn)"></span>call wall</div><div class="cv pos">${d.call_wall??'—'}</div><div class="cs">${d.call_wall?(''+((d.call_wall/d.spot-1)*100).toFixed(1)+'% above'):''}</div></div>
    <div class="chip"><div class="cl"><span class="sw" style="background:var(--red)"></span>put wall</div><div class="cv neg">${d.put_wall??'—'}</div><div class="cs">${d.put_wall?(((d.put_wall/d.spot-1)*100).toFixed(1)+'% below'):''}</div></div>
-   <div class="chip"><div class="cl">theta / day</div><div class="cv cy">$${fmt(d.daily_theta)}</div><div class="cs">decay burn</div></div>`;
+   <div class="chip"><div class="cl">theta / day</div><div class="cv cy">$${fmt(d.daily_theta)}</div><div class="cs">decay burn</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--grn)"></span>call oi</div><div class="cv pos">${fmt(cpt.call_oi)}</div><div class="cs">${fmt(cpt.call_vol)} vol traded</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--red)"></span>put oi</div><div class="cv neg">${fmt(cpt.put_oi)}</div><div class="cs">${fmt(cpt.put_vol)} vol traded</div></div>`;
   renderAll(d);
 }
 
@@ -421,6 +427,16 @@ function renderAll(d){
   mk('expC',{data:{labels:exps,datasets:[{type:'bar',data:exps.map(e=>d.net_gex_by_expiry[e]),borderRadius:3,
     backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(47,213,124,.7)':'rgba(255,82,102,.7)')}]},
     options:(()=>{const o=base();o.indexAxis='x';o.scales={x:{ticks:{color:'#9a9aa6',font:{size:9.5}},grid:{color:'#101014'}},y:{ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}}};return o;})()});
+
+  // call vs put split (OI & volume) grouped bars
+  const cpO=d.call_put_oi||{},cpV=d.call_put_volume||{};
+  const cpl=Object.keys(cpO).map(Number).sort((a,b)=>a-b).filter(k=>Math.abs(k-SPOT)<=(NSTRIKES||80));
+  mk('cpSplitC',{data:{labels:cpl.map(String),datasets:[
+    {type:'bar',label:'Call OI',data:cpl.map(k=>cpO[String(k)]?.c||0),backgroundColor:'rgba(47,213,124,.7)',borderRadius:2},
+    {type:'bar',label:'Put OI',data:cpl.map(k=>cpO[String(k)]?.p||0),backgroundColor:'rgba(255,82,102,.7)',borderRadius:2},
+    {type:'line',label:'Call Vol',data:cpl.map(k=>cpV[String(k)]?.c||0),borderColor:'#2fd57c',borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.3},
+    {type:'line',label:'Put Vol',data:cpl.map(k=>cpV[String(k)]?.p||0),borderColor:'#ff5266',borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.3}]},
+    options:(()=>{const o=base();o.indexAxis='x';o.scales.x={ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}};o.scales.y={ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}};o.plugins.zoom=ZOOM;o.plugins.legend={labels:{color:'#9a9aa6',boxWidth:8,font:{size:10}}};return o;})()});
 
   drawHeat(d);
   table(d,Object.keys(d.gex_by_strike).map(Number));
