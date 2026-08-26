@@ -58,8 +58,9 @@ def kstr(k):
     return str(int(f)) if f == int(f) else str(f)
 
 
-def compute_chain(tk, spot):
-    """Compute exposures for all near expiries of a ticker."""
+def compute_chain(tk, spot, max_expiries=8):
+    """Compute exposures per expiry; returns aggregate + by_expiry breakdown."""
+    expirations = (tk.options or [])[:max_expiries]
     expirations = tk.options or []
     total_gex = 0.0
     gex_by_strike, dex_by_strike, vex_by_strike = {}, {}, {}
@@ -68,6 +69,9 @@ def compute_chain(tk, spot):
     net_gex_by_expiry = {}
     daily_theta = 0.0
     gex_matrix = {}  # {expiry: {strike_str: gex}} for the heatmap
+    dex_matrix, vex_matrix, theta_matrix = {}, {}, {}
+    iv_matrix, vol_matrix, oi_matrix = {}, {}, {}
+    totals_by_expiry = {}  # {exp: {'total_gex':..,'daily_theta':..,'zero_gamma':..,'call_wall':..,'put_wall':..}}
 
     now = dt.datetime.now(dt.timezone.utc)
     for exp in expirations[:8]:
@@ -116,6 +120,19 @@ def compute_chain(tk, spot):
                 oi_by_strike[ks] = oi_by_strike.get(ks, 0) + oi
                 net_gex_by_expiry[exp] = net_gex_by_expiry.get(exp, 0) + gex
                 gex_matrix.setdefault(exp, {})[ks] = gex_matrix.get(exp, {}).get(ks, 0) + gex
+                dex_matrix.setdefault(exp, {})[ks] = dex_matrix.get(exp, {}).get(ks, 0) + dex
+                vex_matrix.setdefault(exp, {})[ks] = vex_matrix.get(exp, {}).get(ks, 0) + vex
+                theta_matrix.setdefault(exp, {})[ks] = theta_matrix.get(exp, {}).get(ks, 0) + th_ex
+                vol_matrix.setdefault(exp, {})[ks] = vol_matrix.get(exp, {}).get(ks, 0) + vol
+                oi_matrix.setdefault(exp, {})[ks] = oi_matrix.get(exp, {}).get(ks, 0) + oi
+
+    # per-expiry totals from the matrices
+    for exp, smap in gex_matrix.items():
+        tmap = theta_matrix.get(exp, {})
+        totals_by_expiry[exp] = {
+            "total_gex": sum(smap.values()),
+            "daily_theta": sum(tmap.values()),
+        }
 
     def round_dict(d):
         return {str(k): round(v, 2) for k, v in sorted(d.items())}
@@ -138,7 +155,25 @@ def compute_chain(tk, spot):
         "volume_by_strike": strike_dict(vol_by_strike),
         "oi_by_strike": strike_dict(oi_by_strike),
         "gex_matrix": {exp: strike_dict(strikes_d) for exp, strikes_d in sorted(gex_matrix.items())},
-        "expirations_used": expirations[:8],
+        "expirations_used": expirations[:max_expiries],
+        "by_expiry": {
+            exp: {
+                "total_gex": round(totals_by_expiry[exp]["total_gex"], 2),
+                "daily_theta": round(totals_by_expiry[exp]["daily_theta"], 2),
+                "zero_gamma": zero_gamma(spot, gex_matrix[exp]),
+                "call_wall": call_put_walls(gex_matrix[exp])[0],
+                "put_wall": call_put_walls(gex_matrix[exp])[1],
+                "gex_by_strike": strike_dict(gex_matrix[exp]),
+                "dex_by_strike": strike_dict(dex_matrix.get(exp, {})),
+                "vex_by_strike": strike_dict(vex_matrix.get(exp, {})),
+                "theta_by_strike": strike_dict(theta_matrix.get(exp, {})),
+                "iv_by_strike": {k: round(iv_sum[k] / iv_cnt[k], 4) for k in
+                                 sorted({k for k in iv_sum if k in gex_matrix[exp]}, key=float)},
+                "volume_by_strike": strike_dict(vol_matrix.get(exp, {})),
+                "oi_by_strike": strike_dict(oi_matrix.get(exp, {})),
+            }
+            for exp in sorted(gex_matrix.keys())
+        },
     }
 
 

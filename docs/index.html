@@ -88,6 +88,7 @@ footer a{color:var(--mut)}
   <div class="brand"><div class="sq">g</div>gex<b>flow</b></div>
   <div class="links"><a href="./" style="color:var(--tx)">Dashboard</a><a href="history.html">History</a></div>
   <div class="right">
+    <select id="expSel" style="background:#12121a;border:1px solid var(--line);color:var(--tx);padding:6px 10px;border-radius:8px;font:600 12.5px 'IBM Plex Mono'"><option value="ALL">ALL EXPIRIES</option></select>
     <span class="badge" id="mktBadge"><span class="dot off"></span>—</span>
     <span class="mono" id="updAt">—</span>
   </div>
@@ -197,8 +198,26 @@ function base(x){
 }
 function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
 
+let EXP='ALL';
+function activeView(d){
+  if(EXP!=='ALL'&&d.by_expiry&&d.by_expiry[EXP]){
+    const e=d.by_expiry[EXP];
+    return {...e, spot:d.spot, symbol:d.symbol, net_gex_by_expiry:d.net_gex_by_expiry,
+            gex_matrix:d.gex_matrix, expirations_used:d.expirations_used};
+  }
+  return d;
+}
+function buildExpSel(d){
+  const sel=$('expSel');
+  const prev=EXP;
+  sel.innerHTML='<option value="ALL">ALL EXPIRIES</option>'+d.expirations_used.map(e=>`<option value="${e}">${e}</option>`).join('');
+  sel.value=prev;
+  sel.onchange=()=>{EXP=sel.value;render();};
+}
 function render(){
-  const d=DATA.tickers[CUR];
+  const raw=DATA.tickers[CUR];
+  buildExpSel(raw);
+  const d=activeView(raw);
   const ch=$('chips');
   if(!d||d.error){ch.innerHTML='<div class="chip"><div class="cl">'+CUR+'</div><div class="cv neg">error</div></div>';return;}
   SPOT=d.spot;
