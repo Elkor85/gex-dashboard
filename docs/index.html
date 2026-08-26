@@ -244,7 +244,7 @@ function renderAll(d){
   const mx=Math.max(...rk.map(r=>Math.abs(r.v)),1);
   $('rank').innerHTML=rk.map(r=>{
     const w=Math.max(Math.abs(r.v)/mx*100,2);
-    const tags=(r.k==lvl.cw?'<span class="tagl t-cw">CW</span> ':'')+(r.k==lvl.pw?'<span class="tagl t-pw">PW</span> ')+(r.k==lvl.zg?'<span class="tagl t-zg">ZG</span>':'');
+    const tags=(r.k==lvl.cw?'<span class="tagl t-cw">CW</span> ':'')+(r.k==lvl.pw?'<span class="tagl t-pw">PW</span> ':'')+(r.k==lvl.zg?'<span class="tagl t-zg">ZG</span>':'');
     const bar = r.v >= 0
       ? `<span style="position:absolute;left:50%;top:1px;bottom:1px;width:${w/2}%;background:linear-gradient(90deg,#2fd57c55,#2fd57c);border-radius:0 3px 3px 0"></span>`
       : `<span style="position:absolute;right:50%;top:1px;bottom:1px;width:${w/2}%;background:linear-gradient(-90deg,#ff526655,#ff5266);border-radius:3px 0 0 3px"></span>`;
