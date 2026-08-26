@@ -94,6 +94,11 @@ footer a{color:var(--mut)}
     <select id="uiZoom" style="background:#12121a;border:1px solid var(--line);color:var(--tx);padding:6px 10px;border-radius:8px;font:600 12.5px 'IBM Plex Mono'">
       <option value="0.85">UI 85%</option><option value="1" selected>UI 100%</option><option value="1.15">UI 115%</option><option value="1.3">UI 130%</option>
     </select>
+    <select id="nStrikes" style="background:#12121a;border:1px solid var(--line);color:var(--tx);padding:6px 10px;border-radius:8px;font:600 12.5px 'IBM Plex Mono'">
+      <option value="0">ALL STRIKES</option><option value="10">±10</option><option value="20">±20</option>
+      <option value="30" selected>±30</option><option value="50">±50</option><option value="80">±80</option>
+    </select>
+    <button id="calBtn" style="background:#12121a;border:1px solid var(--line);color:var(--tx);padding:6px 12px;border-radius:8px;font:600 12.5px 'IBM Plex Mono';cursor:pointer">📅 DATES</button>
     <select id="grpSel" style="background:#12121a;border:1px solid var(--line);color:var(--tx);padding:6px 10px;border-radius:8px;font:600 12.5px 'IBM Plex Mono'">
       <option value="1">STRIKE ×1</option><option value="2">×2</option><option value="5">×5</option>
       <option value="10">×10</option><option value="25">×25</option><option value="50">×50</option>
@@ -200,7 +205,8 @@ function buildRail(){
 
 if(window.ChartZoom)Chart.register(ChartZoom);
 const ZOOM={zoom:{wheel:{enabled:true,speed:.08},pinch:{enabled:true},
-  pan:{enabled:true,mode:'x',modifierKey:'ctrl'},mode:'xy'},
+  drag:{enabled:true,borderColor:'#4b7bff55',backgroundColor:'#4b7bff22'},
+  pan:{enabled:true,mode:'x',modifierKey:'ctrl'},mode:'x'},
   limits:{x:{minRange:2}}};
 function base(x){
   return Object.assign({indexAxis:'y',responsive:true,maintainAspectRatio:false,
@@ -245,20 +251,93 @@ function activeView(d){
   }
   return d;
 }
+let EXPSET=null; // null = ALL, else Set of selected dates
 function buildExpSel(d){
   const sel=$('expSel');
-  const prev=EXP;
-  sel.innerHTML='<option value="ALL">ALL EXPIRIES</option>'+d.expirations_used.map(e=>`<option value="${e}">${e}</option>`).join('');
-  sel.value=prev;
-  sel.onchange=()=>{EXP=sel.value;render();};
+  sel.multiple=true;sel.size=1;
+  const opts=['ALL',...d.expirations_used];
+  sel.innerHTML=opts.map(e=>`<option value="${e}">${e==='ALL'?'ALL EXPIRIES':e}</option>`).join('');
+  if(EXPSET){[...sel.options].forEach(o=>{if(EXPSET.has(o.value))o.selected=true;});}
+  else sel.selectedIndex=0;
+  sel.onchange=()=>{
+    const chosen=[...sel.selectedOptions].map(o=>o.value).filter(v=>v!=='ALL');
+    EXPSET=(!chosen.length||chosen.length===d.expirations_used.length)?null:new Set(chosen);
+    render();
+  };
+  // calendar button opens a checkbox modal
+  $('calBtn').onclick=()=>openCal(d);
   const gs=$('grpSel');
   gs.value=String(GROUP);
   gs.onchange=()=>{GROUP=+gs.value;render();};
+  const ns=$('nStrikes');
+  ns.value=String(NSTRIKES);
+  ns.onchange=()=>{NSTRIKES=+ns.value;render();};
+}
+function openCal(raw){
+  let mv=document.getElementById('calModal');if(mv)mv.remove();
+  const cur=EXPSET||new Set();
+  mv=document.createElement('div');mv.id='calModal';
+  mv.style.cssText='position:fixed;inset:0;background:#000a;z-index:200;display:grid;place-items:center';
+  mv.innerHTML=`<div style="background:#101014;border:1px solid #2a2a32;border-radius:12px;padding:20px;min-width:320px">
+    <div style="font-weight:700;margin-bottom:12px">📅 Select expiration dates</div>
+    <div style="display:flex;flex-direction:column;gap:7px;max-height:320px;overflow:auto">
+      ${raw.expirations_used.map(e=>`<label style="display:flex;gap:9px;align-items:center;font-family:'IBM Plex Mono';font-size:13px;cursor:pointer">
+        <input type="checkbox" data-e="${e}" ${cur.has(e)?'checked':''}> ${e}</label>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;justify-content:flex-end">
+      <button id="calAll" style="background:none;border:1px solid #2a2a32;color:#9a9aa6;padding:6px 12px;border-radius:6px;cursor:pointer">All</button>
+      <button id="calOk" style="background:#4b7bff;border:none;color:#fff;font-weight:600;padding:6px 16px;border-radius:6px;cursor:pointer">Apply</button>
+    </div></div>`;
+  document.body.appendChild(mv);
+  mv.onclick=e=>{if(e.target===mv)mv.remove();};
+  mv.querySelector('#calAll').onclick=()=>{EXPSET=null;render();mv.remove();};
+  mv.querySelector('#calOk').onclick=()=>{
+    const chosen=[...mv.querySelectorAll('input:checked')].map(i=>i.dataset.e);
+    EXPSET=(chosen.length&&chosen.length<raw.expirations_used.length)?new Set(chosen):null;
+    render();mv.remove();
+  };
+}
+
+// merge selected expiries into one view
+function mergeExpiries(raw){
+  if(!EXPSET)return raw;
+  const keys=['gex_by_strike','dex_by_strike','vex_by_strike','theta_by_strike','volume_by_strike','oi_by_strike'];
+  const out={spot:raw.spot,symbol:raw.symbol,expirations_used:[...EXPSET],net_gex_by_expiry:{},gex_matrix:{}};
+  for(const k of keys)out[k]={};
+  const ivNum={},ivDen={};
+  for(const e of Object.keys(raw.by_expiry||{})){
+    if(!EXPSET.has(e))continue;
+    const src=raw.by_expiry[e];
+    out.net_gex_by_expiry[e]=src.total_gex;
+    out.gex_matrix[e]=src.gex_by_strike;
+    for(const k of keys){for(const[sk,v]of Object.entries(src[k]||{}))out[k][sk]=(out[k][sk]||0)+v;}
+    for(const[sk,v]of Object.entries(src.iv_by_strike||{})){
+      const w=(src.volume_by_strike?.[sk])||1;
+      ivNum[sk]=(ivNum[sk]||0)+v*w;ivDen[sk]=(ivDen[sk]||0)+w;}
+  }
+  out.total_gex=Object.values(out.gex_by_strike).reduce((a,b)=>a+b,0);
+  out.daily_theta=Object.values(out.theta_by_strike).reduce((a,b)=>a+b,0);
+  const sorted=Object.entries(out.gex_by_strike).sort((a,b)=>+a[0]-+b[0]);
+  let cB=0;const pts=[];
+  for(const[k,v]of[...sorted].reverse()){if(+k>out.spot)break;cB+=v;pts.push([+k,cB]);}
+  let cA=0;
+  for(const[k,v]of sorted.filter(([k])=>+k>out.spot)){cA+=v;pts.push([+k,cA]);}
+  let zg=null;
+  for(let i=1;i<pts.length;i++){const[s0,c0]=pts[i-1],[s1,c1]=pts[i];
+    if(c0*c1<0){zg=s0+(Math.abs(c0)/(Math.abs(c0)+Math.abs(c1)))*(s1-s0);break;}}
+  out.zero_gamma=zg!=null?+zg.toFixed(2):null;
+  let cw=null,pw=null;
+  for(const[k,v]of Object.entries(out.gex_by_strike)){
+    if(v>0&&(cw===null||v>out.gex_by_strike[cw]))cw=k;
+    if(v<0&&(pw===null||v<out.gex_by_strike[pw]))pw=k;}
+  out.call_wall=cw;out.put_wall=pw;
+  out.iv_by_strike=Object.fromEntries(Object.entries(ivNum).map(([k,n])=>[k,n/(ivDen[k]||1)]));
+  return out;
 }
 function render(){
   const raw=DATA.tickers[CUR];
   buildExpSel(raw);
-  let d=activeView(raw);
+  let d=mergeExpiries(raw);
   d=bucketize(d);
   const ch=$('chips');
   if(!d||d.error){ch.innerHTML='<div class="chip"><div class="cl">'+CUR+'</div><div class="cv neg">error</div></div>';return;}
@@ -281,9 +360,11 @@ function highestVol(d){
   let bk=null,bv=-1;for(const[k,v]of Object.entries(d.volume_by_strike||{}))if(v>bv){bv=v;bk=k;}return bk;
 }
 
+let NSTRIKES=30;
 function renderAll(d){
-  const strikes=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b)
-    .filter(k=>k>d.spot*0.85&&k<d.spot*1.15); // focus window like gexbot
+  const allK=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b);
+  let win=NSTRIKES>0?allK.filter(k=>Math.abs(k-d.spot)<=NSTRIKES):allK.filter(k=>k>d.spot*0.85&&k<d.spot*1.15);
+  const strikes=(win.length?win:allK.slice(0,60));
   const labels=strikes.map(String);
   const gv=labels.map(s=>d.gex_by_strike[s]||0);
 
