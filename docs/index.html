@@ -173,8 +173,9 @@ async function load(){
     const r=await fetch('data/gex_data.json?t='+Date.now());DATA=await r.json();
     $('err').style.display='none';$('updAt').textContent=new Date(DATA.updated_utc).toLocaleTimeString();
     if(!CUR||!DATA.tickers[CUR])CUR=Object.keys(DATA.tickers)[0];
-    buildRail();render();
-  }catch(e){const el=$('err');el.style.display='block';el.textContent='Load failed: '+e;}
+    buildRail();
+    try{render();}catch(e2){console.error('render error',e2);const el=$('err');el.style.display='block';el.textContent='Render error: '+e2.message;}
+  }catch(e){console.error('load error',e);const el=$('err');el.style.display='block';el.textContent='Load failed: '+e;}
 }
 
 function buildRail(){
@@ -340,7 +341,9 @@ function drawHeat(d){
     exps.forEach((e,j)=>{const v=d.gex_matrix[e][String(k)]||0;
       const t=Math.pow(Math.min(Math.abs(v)/mx,1),.55)*.85;
       c.fillStyle=v>=0?`rgba(47,213,124,${t})`:`rgba(255,82,102,${t})`;
-      c.beginPath();c.roundRect(LW+j*cw+2,y+2,cw-4,chh-4,3);c.fill();});});
+      c.beginPath();
+      if(c.roundRect)c.roundRect(LW+j*cw+2,y+2,cw-4,chh-4,3);else c.rect(LW+j*cw+2,y+2,cw-4,chh-4);
+      c.fill();});});
 }
 $('heat').addEventListener('mousemove',ev=>{
   if(!HS)return;const r=ev.target.getBoundingClientRect();
