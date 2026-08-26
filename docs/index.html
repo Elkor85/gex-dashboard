@@ -232,7 +232,7 @@ function renderAll(d){
       {type:'bar',label:'putγ',data:gv.map(v=>v<0?v:0),backgroundColor:'rgba(255,82,102,.75)',borderRadius:2,borderSkipped:false,barPercentage:.82}]},
     options:base({plugins:{legend:{display:false},
       tooltip:{callbacks:{label:c=>` ${c.dataset.label}: $${fmt(c.raw)}`}},
-      annotation:null}})});
+      }})});
 
   // draw level lines over the canvas
   drawLevels('gexMain',lvl,labels,d);
@@ -244,11 +244,16 @@ function renderAll(d){
   $('rank').innerHTML=rk.map(r=>{
     const w=Math.max(Math.abs(r.v)/mx*100,2);
     const tags=(r.k==lvl.cw?'<span class="tagl t-cw">CW</span> ':'')+(r.k==lvl.pw?'<span class="tagl t-pw">PW</span> ')+(r.k==lvl.zg?'<span class="tagl t-zg">ZG</span>':'');
-    return `<div class="legend" style="margin:0 0 7px"><span class="mono" style="width:58px;text-align:right;font-weight:600">${r.k}</span>
+    const bar = r.v >= 0
+      ? `<span style="position:absolute;left:50%;top:1px;bottom:1px;width:${w/2}%;background:linear-gradient(90deg,#2fd57c55,#2fd57c);border-radius:0 3px 3px 0"></span>`
+      : `<span style="position:absolute;right:50%;top:1px;bottom:1px;width:${w/2}%;background:linear-gradient(-90deg,#ff526655,#ff5266);border-radius:3px 0 0 3px"></span>`;
+    return `<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;font-size:12.5px">
+      <span class="mono" style="width:56px;text-align:right;font-weight:600">${r.k}</span>
       <span style="flex:1;height:14px;background:#0d0d11;border-radius:3px;overflow:hidden;display:block;position:relative">
-      <span style="position:absolute;inset:0 auto 0 ${r.v>=0?'50%':''};left:${r.v>=0?'':0};width:${w/2}%;${r.v>=0?'left:50%;background:linear-gradient(90deg,#2fd57c66,#2fd57c)':'right:50%;background:linear-gradient(-90deg,#ff526666,#ff5266)'}"></span>
-      <span style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#2a2a32"></span></span>
-      <span class="mono ${sn(r.v)}" style="width:70px;text-align:right">${fmt(r.v)}</span><span style="width:44px">${tags}</span></div>`;
+        ${bar}<span style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#2a2a32"></span>
+      </span>
+      <span class="mono ${sn(r.v)}" style="width:68px;text-align:right">${fmt(r.v)}</span>
+      <span style="width:46px">${tags}</span></div>`;
   }).join('');
 
   /* vertical charts (keep x = strike for these) */
