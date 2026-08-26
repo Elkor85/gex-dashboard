@@ -133,6 +133,15 @@ footer b{color:var(--muted)}
 
     <div class="panel col12"><h2>Net GEX by Expiration</h2><div class="cw" style="height:185px"><canvas id="expChart"></canvas></div></div>
 
+    <div class="panel col12"><h2>Gamma Heatmap — Strike × Expiry <span class="tag">hover cells for values · green = call gamma, red = put gamma</span></h2>
+      <div id="heatwrap" style="overflow-x:auto"><canvas id="heatCanvas" style="display:block"></canvas></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11px;color:var(--dim)">
+        <span>PUT γ</span>
+        <div style="flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#ff4d67,#1a2334,#00e08c)"></div>
+        <span>CALL γ</span>
+        <span id="heatTip" style="margin-left:auto;font-family:'JetBrains Mono';color:var(--muted)">&nbsp;</span>
+      </div></div>
+
     <div class="panel col12"><h2>Strike Matrix <span class="tag">click headers to sort · colored by intensity</span></h2>
       <div style="overflow-x:auto;max-height:430px;overflow-y:auto"><table id="tbl"><thead><tr>
         <th data-k="k">Strike ▾</th><th data-k="g">GEX</th><th data-k="dx">DEX</th><th data-k="vx">VEX</th><th data-k="th">Theta</th><th data-k="iv">IV</th><th data-k="v">Volume</th><th data-k="oi">OI</th>
@@ -281,7 +290,74 @@ function render(){
       backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(0,224,140,.55)':'rgba(255,77,103,.55)')}]},options:baseOpts()});
 
   renderTable(d,strikes);
+  drawHeatmap(d);
 }
+
+/* ── Gamma heatmap: strikes (rows) × expiries (cols) ── */
+let heatState=null;
+function drawHeatmap(d){
+  const cv=document.getElementById('heatCanvas');
+  const wrap=document.getElementById('heatwrap');
+  const exps=Object.keys(d.gex_matrix||{});
+  if(!exps.length){cv.width=0;return;}
+  // union of strikes sorted, keep those within ±20% of spot
+  const sset=new Set();
+  exps.forEach(e=>Object.keys(d.gex_matrix[e]).forEach(k=>sset.add(+k)));
+  let all=[...sset].sort((a,b)=>a-b).filter(k=>k>d.spot*0.8&&k<d.spot*1.2);
+  if(all.length>40)all=all.filter((_,i)=>i%Math.ceil(all.length/40)===0);
+  const maxAbs=Math.max(...all.map(k=>exps.map(e=>Math.abs(d.gex_matrix[e][String(k)]||0))).flat(),1e-9);
+
+  const cellH=22,lblW=64,hdrH=26,topPad=6;
+  const cellW=76;
+  const W=lblW+exps.length*cellW+10,H=hdrH+topPad+all.length*cellH+6;
+  const dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  ctx.font="10.5px 'JetBrains Mono',monospace";
+
+  // headers
+  ctx.textAlign='center';ctx.fillStyle='#5a6784';
+  exps.forEach((e,j)=>ctx.fillText(e.slice(5),lblW+j*cellW+cellW/2,hdrH-9));
+  // row labels
+  ctx.textAlign='right';
+  all.forEach((k,i)=>{
+    const y=hdrH+topPad+i*cellH;
+    ctx.fillStyle=k===CUR_SPOT?'#ffb020':'#5a6784';
+    ctx.fillText(String(k),lblW-8,y+cellH/2+4);
+  });
+  // cells
+  heatState={all,exps,lblW,hdrH,topPad,cellW,cellH,d,maxAbs};
+  all.forEach((k,i)=>{
+    const y=hdrH+topPad+i*cellH;
+    exps.forEach((e,j)=>{
+      const v=d.gex_matrix[e][String(k)]||0;
+      const t=Math.pow(Math.min(Math.abs(v)/maxAbs,1),0.55)*0.85;
+      ctx.fillStyle=v>=0?`rgba(0,224,140,${t})`:`rgba(255,77,103,${t})`;
+      const x=lblW+j*cellW+3;
+      ctx.beginPath();ctx.roundRect(x,y+2,cellW-6,cellH-4,4);ctx.fill();
+      if(Math.abs(v)/maxAbs>0.35){
+        ctx.fillStyle='#04060c99';ctx.textAlign='center';
+        ctx.fillText(fmt(v),x+(cellW-6)/2,y+cellH/2+4);
+      }
+    });
+  });
+}
+
+document.getElementById('heatCanvas').addEventListener('mousemove',ev=>{
+  if(!heatState)return;
+  const r=ev.target.getBoundingClientRect();
+  const x=ev.clientX-r.left,y=ev.clientY-r.top;
+  const j=Math.floor((x-heatState.lblW)/heatState.cellW);
+  const i=Math.floor((y-heatState.hdrH-heatState.topPad)/heatState.cellH);
+  const tip=document.getElementById('heatTip');
+  if(j>=0&&j<heatState.exps.length&&i>=0&&i<heatState.all.length){
+    const k=heatState.all[i],e=heatState.exps[j];
+    const v=heatState.d.gex_matrix[e][String(k)]||0;
+    tip.innerHTML=`<b style="color:#fff">${k}</b> · ${e} · <span class="${sgn(v)}">$${fmt(v)}</span>`;
+  } else tip.innerHTML='&nbsp;';
+});
+document.getElementById('heatCanvas').addEventListener('mouseleave',()=>{document.getElementById('heatTip').innerHTML='&nbsp;';});
 
 /* thermal coloring for table cells */
 function heat(v,max,min=0){

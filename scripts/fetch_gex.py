@@ -67,6 +67,7 @@ def compute_chain(tk, spot):
     vol_by_strike, oi_by_strike = {}, {}
     net_gex_by_expiry = {}
     daily_theta = 0.0
+    gex_matrix = {}  # {expiry: {strike_str: gex}} for the heatmap
 
     now = dt.datetime.now(dt.timezone.utc)
     for exp in expirations[:8]:
@@ -114,6 +115,7 @@ def compute_chain(tk, spot):
                 vol_by_strike[ks] = vol_by_strike.get(ks, 0) + vol
                 oi_by_strike[ks] = oi_by_strike.get(ks, 0) + oi
                 net_gex_by_expiry[exp] = net_gex_by_expiry.get(exp, 0) + gex
+                gex_matrix.setdefault(exp, {})[ks] = gex_matrix.get(exp, {}).get(ks, 0) + gex
 
     def round_dict(d):
         return {str(k): round(v, 2) for k, v in sorted(d.items())}
@@ -135,6 +137,7 @@ def compute_chain(tk, spot):
         "iv_by_strike": {k: v for k, v in sorted(iv_avg.items(), key=lambda x: float(x[0]))},
         "volume_by_strike": strike_dict(vol_by_strike),
         "oi_by_strike": strike_dict(oi_by_strike),
+        "gex_matrix": {exp: strike_dict(strikes_d) for exp, strikes_d in sorted(gex_matrix.items())},
         "expirations_used": expirations[:8],
     }
 
