@@ -3,386 +3,362 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GEX Flow — Institutional Options Analytics</title>
-<meta name="description" content="Real-time gamma exposure (GEX), delta, vanna & theta analytics for SPX, SPY, QQQ, NVDA, TSLA and more. Dealer positioning levels, zero gamma, call/put walls.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e1422'/><text x='50' y='68' font-size='58' text-anchor='middle' fill='%2316d888' font-family='serif'>Γ</text></svg>">
+<title>gexflow — options analytics</title>
+<meta name="description" content="Live options positioning analytics: GEX by strike, dealer levels, zero gamma, call & put walls, DEX, vanna and charm exposure.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23000'/><text x='50' y='70' font-size='60' text-anchor='middle' fill='%234b7bff' font-family='monospace'>g</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <style>
 :root{
-  --bg:#04060c;--bg2:#070b14;--card:#0b1120;--card2:#0f1729;--border:#182238;--border2:#223052;
-  --text:#eef2fa;--muted:#8b97b0;--dim:#5a6784;
-  --green:#00e08c;--red:#ff4d67;--accent:#3d7bff;--gold:#ffb020;--purple:#a78bfa;--cyan:#22d3ee;
+  --bg:#000000;--panel:#0a0a0c;--panel2:#101014;--line:#1e1e24;--line2:#2a2a32;
+  --tx:#f2f2f5;--mut:#9a9aa6;--dim:#5f5f6b;
+  --blu:#4b7bff;--grn:#2fd57c;--red:#ff5266;--yel:#ffc94d;--pur:#b48cff;--org:#ff9838;--cy:#3ed6e0;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:
-  radial-gradient(1200px 400px at 70% -10%, #0d1a3a55, transparent),
-  radial-gradient(900px 300px at 10% -5%, #06283d44, transparent), var(--bg);
-  color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:13.5px;
-  font-feature-settings:'tnum';letter-spacing:.1px}
-::-webkit-scrollbar{height:9px;width:9px}::-webkit-scrollbar-track{background:var(--bg2)}
-::-webkit-scrollbar-thumb{background:#243149;border-radius:5px}::-webkit-scrollbar-thumb:hover{background:#33456e}
+body{background:var(--bg);color:var(--tx);font-family:'IBM Plex Sans',sans-serif;font-size:13.5px;-webkit-font-smoothing:antialiased}
+.mono{font-family:'IBM Plex Mono',monospace}
 
-/* ── topbar ── */
-.topbar{position:sticky;top:0;z-index:60;background:#05080fe6;backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border);padding:0 26px;height:58px;display:flex;align-items:center;gap:16px}
-.logo{display:flex;align-items:center;gap:11px;font-weight:800;font-size:16px;letter-spacing:.3px}
-.logo .dot{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:#fff;font-size:15px;font-weight:900;font-family:Georgia,serif;
-  background:linear-gradient(135deg,#00e08c,#3d7bff 55%,#a78bfa);box-shadow:0 0 18px #3d7bff44}
-.logo em{font-style:normal;color:var(--dim);font-weight:600}
-.navlinks{display:flex;gap:4px;margin-left:6px}
-.navlinks a{color:var(--muted);text-decoration:none;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:8px}
-.navlinks a:hover{color:var(--text);background:#ffffff0a}
-.navlinks a.active{color:#fff;background:#12234a}
-.clock{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted);background:var(--card);
-  border:1px solid var(--border);padding:6px 12px;border-radius:8px;display:flex;gap:9px;align-items:center}
-.clock b{color:var(--green);font-weight:700}.clock .off{color:var(--red)}
-.refresh{font-size:11px;color:var(--dim)}
+/* ── nav ── */
+nav{position:sticky;top:0;z-index:70;background:#000d;backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+  height:52px;display:flex;align-items:center;gap:22px;padding:0 22px}
+.brand{font-weight:700;font-size:16px;letter-spacing:-.3px;display:flex;align-items:center;gap:9px}
+.brand .sq{width:24px;height:24px;background:var(--blu);border-radius:6px;display:grid;place-items:center;font-family:'IBM Plex Mono';font-weight:600;color:#fff;font-size:13px}
+.brand b{color:var(--blu)}
+nav .links{display:flex;gap:2px}
+nav .links a{color:var(--mut);text-decoration:none;font-size:13px;font-weight:500;padding:6px 11px;border-radius:6px}
+nav .links a:hover{color:var(--tx);background:#ffffff0d}
+nav .right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--dim)}
+.badge{display:inline-flex;align-items:center;gap:6px;background:#12121a;border:1px solid var(--line);padding:4px 10px;border-radius:20px;font-family:'IBM Plex Mono';font-size:11px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:p 1.8s infinite}
+.dot.off{background:var(--dim);animation:none}
+@keyframes p{0%,100%{opacity:1}50%{opacity:.35}}
 
-/* ── ticker tabs ── */
-.tabs{max-width:1560px;margin:16px auto 0;padding:0 26px;display:flex;gap:7px;flex-wrap:wrap}
-.tk{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:8px 15px;border-radius:10px;
-  cursor:pointer;text-align:left;transition:.18s;min-width:86px}
-.tk:hover{transform:translateY(-1px);border-color:var(--border2)}
-.tk.active{background:linear-gradient(160deg,#132a5e,#0c1a38);border-color:var(--accent);box-shadow:0 4px 20px -6px #3d7bff66}
-.tk .sym{display:block;font-weight:800;font-size:13.5px;color:inherit}
-.tk.active .sym{color:#fff}
-.tk .px{display:block;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.wrap{max-width:1480px;margin:0 auto;padding:18px 22px 80px}
 
-main{max-width:1560px;margin:0 auto;padding:16px 26px 80px}
+/* ticker rail */
+.rail{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
+.tk{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);color:var(--mut);padding:8px 13px;border-radius:8px;
+  cursor:pointer;text-align:left;transition:.15s;min-width:92px}
+.tk:hover{border-color:var(--line2)}
+.tk.on{border-color:var(--blu);background:#0d1220;color:var(--tx)}
+.tk .s{display:block;font-weight:600;font-size:13.5px}
+.tk .p{display:block;font-family:'IBM Plex Mono';font-size:11px;color:var(--dim)}
 
-/* ── KPI cards ── */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px;margin-bottom:16px}
-.kpi{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--border);border-radius:14px;padding:15px 17px;position:relative;overflow:hidden}
-.kpi::before{content:'';position:absolute;inset:0 0 auto 0;height:2px;background:var(--kc,var(--accent));opacity:.85}
-.kpi .l{font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:1.4px;font-weight:600;margin-bottom:6px}
-.kpi .v{font-size:23px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;font-family:'JetBrains Mono',monospace}
-.kpi .s{font-size:11.5px;color:var(--muted);margin-top:5px}
-.pos{color:var(--green)}.neg{color:var(--red)}.gold{color:var(--gold)}.purp{color:var(--purple)}.cyan{color:var(--cyan)}
+/* level chips row */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 13px;min-width:128px}
+.chip .cl{font-size:10px;text-transform:uppercase;letter-spacing:1.1px;color:var(--dim);font-weight:600;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.chip .cv{font-family:'IBM Plex Mono';font-size:17px;font-weight:600}
+.chip .cs{font-size:10.5px;color:var(--mut);margin-top:2px}
+.sw{width:8px;height:8px;border-radius:2px;display:inline-block}
 
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
-.panel{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:17px 18px;min-width:0;
-  transition:border-color .2s}
-.panel:hover{border-color:var(--border2)}
-.panel h2{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.6px;font-weight:700;
-  margin-bottom:13px;display:flex;justify-content:space-between;align-items:baseline}
-.panel h2 .tag{font-size:10.5px;color:var(--dim);letter-spacing:.2px;text-transform:none;font-weight:500}
-.cw{position:relative;height:310px}.cw.sm{height:235px}
-.col4{grid-column:span 4}.col6{grid-column:span 6}.col8{grid-column:span 8}.col12{grid-column:span 12}
-@media(max-width:1150px){.col4,.col6,.col8{grid-column:span 12}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.card h3{font-size:11px;text-transform:uppercase;letter-spacing:1.3px;color:var(--mut);font-weight:600;margin-bottom:13px;display:flex;justify-content:space-between;align-items:center}
+.card h3 small{color:var(--dim);text-transform:none;letter-spacing:.2px;font-weight:400}
+.c8{grid-column:span 8}.c4{grid-column:span 4}.c6{grid-column:span 6}.c12{grid-column:span 12}
+@media(max-width:1100px){.c8,.c4,.c6{grid-column:span 12}}
+.cw{position:relative}.cw.h320{height:340px}.cw.h230{height:235px}.cw.h180{height:180px}
 
-/* flow list */
-.flowrow{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:12.5px}
-.flowrow .stk{width:62px;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:right}
-.flowrow .barzone{flex:1;height:15px;background:var(--bg2);border-radius:4px;overflow:hidden}
-.flowrow .bar{height:100%;border-radius:4px;transition:width .5s ease}
-.flowrow .val{width:76px;text-align:right;color:var(--muted);font-size:11.5px;font-family:'JetBrains Mono',monospace}
+/* legend under main chart */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--mut)}
+.legend span{display:flex;align-items:center;gap:7px}
 
 table{width:100%;border-collapse:collapse;font-size:12.5px}
-th,td{text-align:right;padding:8px 11px;border-bottom:1px solid var(--border);white-space:nowrap}
+th,td{text-align:right;padding:7.5px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
-th{color:var(--dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.9px;font-weight:700;position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
-th:hover{color:var(--muted)}
-tbody tr:hover td{background:#ffffff07}
-td{font-family:'JetBrains Mono',monospace;font-weight:500}
-td:first-child{font-family:'Inter'}
-.pill{display:inline-block;padding:1.5px 8px;border-radius:20px;font-size:10px;font-weight:800;font-family:'Inter'}
-.pill.c{background:#00e08c1c;color:var(--green)}.pill.p{background:#ff4d671c;color:var(--red)}
-.pill.s{background:#ffb0201c;color:var(--gold)}
+th{color:var(--dim);font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;position:sticky;top:0;background:var(--panel);cursor:pointer;user-select:none}
+th:hover{color:var(--mut)}
+tbody tr:hover td{background:#ffffff06}
+td{font-family:'IBM Plex Mono',monospace}
+.pos{color:var(--grn)}.neg{color:var(--red)}.yel{color:var(--yel)}.pur{color:var(--pur)}.cy{color:var(--cy)}.blu{color:var(--blu)}
+.tagl{display:inline-block;padding:1px 7px;border-radius:4px;font-size:9.5px;font-weight:700;font-family:'IBM Plex Sans';letter-spacing:.4px}
+.t-cw{background:#2fd57c1e;color:var(--grn)}.t-pw{background:#ff52661e;color:var(--red)}
+.t-hvl{background:#ffc94d1e;color:var(--yel)}.t-zg{background:#b48cff1e;color:var(--pur)}.t-sp{background:#4b7bff1e;color:var(--blu)}
 
-#err{display:none;color:var(--red);background:#ff4d6710;border:1px solid #ff4d6740;border-radius:12px;padding:13px 20px;margin:14px auto;max-width:1560px}
-footer{max-width:1560px;margin:0 auto;padding:0 26px 34px;color:var(--dim);font-size:11.5px;line-height:1.8;border-top:1px solid var(--border);padding-top:18px}
-footer b{color:var(--muted)}
-
-/* skeleton */
-.sk{position:relative;overflow:hidden;background:var(--card2)!important;color:transparent!important;border-radius:6px;min-height:14px}
-@keyframes shimmer{to{background-position:-200% 0}}
+#err{display:none;margin:12px 0;padding:11px 16px;border:1px solid #ff52664d;border-radius:8px;color:var(--red);background:#ff526610;font-size:13px}
+footer{max-width:1480px;margin:0 auto;padding:20px 22px 40px;border-top:1px solid var(--line);color:var(--dim);font-size:11.5px;line-height:1.8}
+footer a{color:var(--mut)}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="logo"><div class="dot">Γ</div>GEX<em>·FLOW</em></div>
-  <div class="navlinks"><a href="./" class="active">Dashboard</a><a href="history.html">History & Backtest</a></div>
-  <div class="clock" id="clock"></div>
-  <div class="refresh" id="refreshIn"></div>
-</div>
+<nav>
+  <div class="brand"><div class="sq">g</div>gex<b>flow</b></div>
+  <div class="links"><a href="./" style="color:var(--tx)">Dashboard</a><a href="history.html">History</a></div>
+  <div class="right">
+    <span class="badge" id="mktBadge"><span class="dot off"></span>—</span>
+    <span class="mono" id="updAt">—</span>
+  </div>
+</nav>
 
-<div id="err"></div>
-
-<div class="tabs" id="tickers">
-  <button class="tk sk" style="width:96px">&nbsp;</button><button class="tk sk" style="width:96px">&nbsp;</button><button class="tk sk" style="width:96px">&nbsp;</button>
-</div>
-
-<main>
-  <div class="kpis" id="kpis"></div>
+<div class="wrap">
+  <div id="err"></div>
+  <div class="rail" id="rail"></div>
+  <div class="chips" id="chips"></div>
 
   <div class="grid">
-    <div class="panel col8"><h2>Gamma Exposure by Strike <span class="tag">$ per 1% move · walls & zero-gamma marked</span></h2><div class="cw"><canvas id="gexChart"></canvas></div></div>
-    <div class="panel col4"><h2>Options Flow <span class="tag">net GEX leaders</span></h2><div style="max-height:310px;overflow-y:auto" id="flowList"></div></div>
 
-    <div class="panel col4"><h2>Cumulative GEX Profile <span class="tag">gamma flip zone</span></h2><div class="cw sm"><canvas id="profileChart"></canvas></div></div>
-    <div class="panel col4"><h2>Delta Exposure <span class="tag">DEX</span></h2><div class="cw sm"><canvas id="dexChart"></canvas></div></div>
-    <div class="panel col4"><h2>Vanna Exposure <span class="tag">VEX</span></h2><div class="cw sm"><canvas id="vexChart"></canvas></div></div>
+    <!-- MAIN: horizontal GEX-by-strike chart like gexbot -->
+    <div class="card c8">
+      <h3>GEX by Strike <small>$ gamma per 1% move · classified dealer levels</small></h3>
+      <div class="cw h320"><canvas id="gexMain"></canvas></div>
+      <div class="legend">
+        <span><span class="sw" style="background:#2fd57ccc"></span>Call γ (support)</span>
+        <span><span class="sw" style="background:#ff5266cc"></span>Put γ (resistance)</span>
+        <span><span class="sw" style="background:#ffc94d;width:18px;height:2px"></span>HVL · highest vol level</span>
+        <span><span class="sw" style="background:#b48cff;width:18px;height:2px"></span>Zero Gamma flip</span>
+        <span><span class="sw" style="background:#fff;width:18px;height:2px;opacity:.7"></span>Spot</span>
+      </div>
+    </div>
 
-    <div class="panel col4"><h2>Theta Exposure</h2><div class="cw sm"><canvas id="thetaChart"></canvas></div></div>
-    <div class="panel col4"><h2>IV Smile & Volume</h2><div class="cw sm"><canvas id="ivChart"></canvas></div></div>
-    <div class="panel col4"><h2>Open Interest Pressure <span class="tag">calls vs puts</span></h2><div class="cw sm"><canvas id="cpChart"></canvas></div></div>
+    <div class="card c4">
+      <h3>Largest Gamma Strikes <small>net |GEX| ranking</small></h3>
+      <div style="max-height:340px;overflow-y:auto" id="rank"></div>
+    </div>
 
-    <div class="panel col12"><h2>Net GEX by Expiration</h2><div class="cw" style="height:185px"><canvas id="expChart"></canvas></div></div>
+    <div class="card c4"><h3>DEX by Strike <small>delta exposure</small></h3><div class="cw h230"><canvas id="dexC"></canvas></div></div>
+    <div class="card c4"><h3>Vanna Exposure <small>VEX</small></h3><div class="cw h230"><canvas id="vexC"></canvas></div></div>
+    <div class="card c4"><h3>Charm / Theta Decay <small>per day</small></h3><div class="cw h230"><canvas id="chaC"></canvas></div></div>
 
-    <div class="panel col12"><h2>Gamma Heatmap — Strike × Expiry <span class="tag">hover cells for values · green = call gamma, red = put gamma</span></h2>
-      <div id="heatwrap" style="overflow-x:auto"><canvas id="heatCanvas" style="display:block"></canvas></div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;font-size:11px;color:var(--dim)">
-        <span>PUT γ</span>
-        <div style="flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#ff4d67,#1a2334,#00e08c)"></div>
-        <span>CALL γ</span>
-        <span id="heatTip" style="margin-left:auto;font-family:'JetBrains Mono';color:var(--muted)">&nbsp;</span>
-      </div></div>
+    <div class="card c4"><h3>IV Term Structure by Strike</h3><div class="cw h230"><canvas id="ivC"></canvas></div></div>
+    <div class="card c4"><h3>Open Interest Walls</h3><div class="cw h230"><canvas id="oiC"></canvas></div></div>
+    <div class="card c4"><h3>Net GEX per Expiry</h3><div class="cw h230"><canvas id="expC"></canvas></div></div>
 
-    <div class="panel col12"><h2>Strike Matrix <span class="tag">click headers to sort · colored by intensity</span></h2>
-      <div style="overflow-x:auto;max-height:430px;overflow-y:auto"><table id="tbl"><thead><tr>
-        <th data-k="k">Strike ▾</th><th data-k="g">GEX</th><th data-k="dx">DEX</th><th data-k="vx">VEX</th><th data-k="th">Theta</th><th data-k="iv">IV</th><th data-k="v">Volume</th><th data-k="oi">OI</th>
+    <div class="card c12">
+      <h3>Gamma Heatmap — Strike × Expiry <small>hover for values</small></h3>
+      <div style="overflow-x:auto"><canvas id="heat" style="display:block"></canvas></div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:10px;font-size:11px;color:var(--dim)">
+        <span>PUT γ</span><div style="flex:1;height:7px;border-radius:4px;background:linear-gradient(90deg,#ff5266,#14141a,#2fd57c)"></div><span>CALL γ</span>
+        <span class="mono" id="heatTip" style="margin-left:auto">&nbsp;</span>
+      </div>
+    </div>
+
+    <div class="card c12">
+      <h3>Full Chain Matrix <small>click headers to sort</small></h3>
+      <div style="overflow:auto;max-height:460px"><table id="tbl"><thead><tr>
+        <th data-k="k">Strike</th><th data-k="g">Net GEX</th><th data-k="dx">DEX</th><th data-k="vx">VEX</th><th data-k="th">Theta</th><th data-k="iv">IV</th><th data-k="v">Volume</th><th data-k="oi">OI</th><th>Level</th>
       </tr></thead><tbody></tbody></table></div>
     </div>
   </div>
-</main>
+</div>
 
 <footer>
-  <b>GEX·FLOW</b> — Options positioning analytics built on Yahoo Finance chains. Greeks via Black-Scholes from quoted IVs.
-  Dealer assumption: customers long calls / short puts. SPX proxied by SPY chain. Levels update every minute during US market hours.
-  <br>Educational tool — <b>not financial advice.</b>
+  <b>gexflow</b> — independent open-source options analytics. Data: Yahoo Finance chains · Greeks via Black-Scholes from quoted IVs.
+  Dealer assumption: customers long calls / short puts. SPX proxied with SPY chain. Levels refresh every minute during US market hours.<br>
+  Educational information only — <b>not investment advice.</b> Options trading involves substantial risk.
 </footer>
 
 <script>
-let DATA=null, CUR=null, sortKey='oi', sortDir=-1;
-const charts={};
-
+let DATA=null,CUR=null,SPOT=0,sortKey='oi',sortDir=-1;
+const charts={},$=i=>document.getElementById(i);
 const fmt=v=>{const a=Math.abs(v);if(!isFinite(v))return'—';
  if(a>=1e12)return(v/1e12).toFixed(2)+'T';if(a>=1e9)return(v/1e9).toFixed(2)+'B';
- if(a>=1e6)return(v/1e6).toFixed(2)+'M';if(a>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(2)};
-const sgn=v=>v>=0?'pos':'neg';
-const kstr=k=>String(Number.isInteger(+k)?+k:k);
+ if(a>=1e6)return(v/1e6).toFixed(2)+'M';if(a>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(1)};
+const sn=v=>v>=0?'pos':'neg',ks=k=>String(Number.isInteger(+k)?+k:k);
 
-function tickClock(){
-  const now=new Date();
-  const et=now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});
-  const day=now.toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short'});
-  const h=parseInt(et.slice(0,2)), m=parseInt(et.slice(3,5));
-  const mins=h*60+m, open=!['Sat','Sun'].includes(day)&&mins>=570&&mins<960;
-  document.getElementById('clock').innerHTML=
-    `<span>${day} ${et} ET</span>`+(open?'<b>● LIVE</b>':'<b class="off">○ CLOSED</b>');
-  const left=(DATA?Math.max(0,60-Math.floor((Date.now()-lastLoad)/1000)):null);
-  document.getElementById('refreshIn').textContent=left!=null?`↻ ${left}s`:'';
+function mktClock(){
+  const n=new Date();
+  const t=n.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});
+  const d=n.toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short'});
+  const mins=parseInt(t.slice(0,2))*60+parseInt(t.slice(3,5));
+  const open=!['Sat','Sun'].includes(d)&&mins>=570&&mins<960;
+  $('mktBadge').innerHTML=`<span class="dot ${open?'':'off'}"></span>${open?'MARKET LIVE':'CLOSED'} · ${t.slice(0,5)} ET`;
 }
-setInterval(tickClock,1000);
+setInterval(mktClock,1000);
 
-let lastLoad=0;
 async function load(){
   try{
-    const r=await fetch('data/gex_data.json?t='+Date.now());
-    DATA=await r.json(); lastLoad=Date.now();
-    document.getElementById('err').style.display='none';
-    buildTabs();
-    if(!CUR||!DATA.tickers[CUR])selectTab(Object.keys(DATA.tickers)[0]);
-  }catch(e){
-    const el=document.getElementById('err');el.style.display='block';
-    el.textContent='Failed to load data: '+e;
-  }
+    const r=await fetch('data/gex_data.json?t='+Date.now());DATA=await r.json();
+    $('err').style.display='none';$('updAt').textContent=new Date(DATA.updated_utc).toLocaleTimeString();
+    if(!CUR||!DATA.tickers[CUR])CUR=Object.keys(DATA.tickers)[0];
+    buildRail();render();
+  }catch(e){const el=$('err');el.style.display='block';el.textContent='Load failed: '+e;}
 }
 
-function buildTabs(){
-  const c=document.getElementById('tickers');c.innerHTML='';
+function buildRail(){
+  $('rail').innerHTML='';
   Object.keys(DATA.tickers).forEach(t=>{
-    const d=DATA.tickers[t];
-    const b=document.createElement('button');
-    b.className='tk'+(t===CUR?' active':'');b.onclick=()=>selectTab(t);
-    b.innerHTML=`<span class="sym">${t}</span><span class="px">${d&&d.spot&&!d.error?('$'+d.spot):'—'}</span>`;
-    c.appendChild(b);
+    const d=DATA.tickers[t],b=document.createElement('button');
+    b.className='tk'+(t===CUR?' on':'');b.onclick=()=>{CUR=t;buildRail();render();};
+    b.innerHTML=`<span class="s">${t}</span><span class="p">${d&&d.spot&&!d.error?d.spot:'—'}</span>`;
+    $('rail').appendChild(b);
   });
 }
-function selectTab(t){CUR=t;buildTabs();render();}
 
-function baseOpts(extra){
-  return Object.assign({responsive:true,maintainAspectRatio:false,
-    interaction:{mode:'index',intersect:false},
-    scales:{x:{ticks:{color:'#5a6784',maxRotation:90,font:{size:9.5,family:"'JetBrains Mono'"}},grid:{color:'#10192c'}},
-            y:{ticks:{color:'#8b97b0',font:{size:10},callback:v=>fmt(v)},grid:{color:'#10192c'}}},
-    plugins:{legend:{labels:{color:'#aab6cc',boxWidth:9,boxHeight:9,usePointStyle:true,pointStyle:'rectRounded',font:{size:10.5}}}}},extra||{});
+function base(x){
+  return Object.assign({indexAxis:'y',responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'nearest',intersect:false},
+    scales:{x:{ticks:{color:'#5f5f6b',font:{size:10,family:"'IBM Plex Mono'"},callback:v=>fmt(v)},grid:{color:'#141419'}},
+            y:{ticks:{color:'#9a9aa6',font:{size:9.5,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}}},
+    plugins:{legend:{display:false}}},x||{});
 }
-function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
-const spotLine=ls=>({type:'line',label:'Spot',data:ls.map(()=>CUR_SPOT),borderColor:'#ffb020',borderDash:[7,5],pointRadius:0,borderWidth:1.5,order:-1});
-let CUR_SPOT=0;
+function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart($(id),cfg);}
 
 function render(){
   const d=DATA.tickers[CUR];
-  const kp=document.getElementById('kpis');
-  if(!d||d.error){kp.innerHTML='<div class="kpi"><div class="l">'+CUR+'</div><div class="v neg">data error</div></div>';return;}
-  CUR_SPOT=d.spot;
-
-  /* ── KPI cards ── */
+  const ch=$('chips');
+  if(!d||d.error){ch.innerHTML='<div class="chip"><div class="cl">'+CUR+'</div><div class="cv neg">error</div></div>';return;}
+  SPOT=d.spot;
   const regime=d.total_gex>=0
-    ?'<span class="pos">Positive · vol suppressed</span>'
-    :'<span class="neg">Negative · vol amplified</span>';
-  kp.innerHTML=`
-   <div class="kpi" style="--kc:#ffb020"><div class="l">${CUR} Spot</div><div class="v">$${d.spot}</div>
-     <div class="s">${new Date(DATA.updated_utc).toLocaleTimeString()}</div></div>
-   <div class="kpi" style="--kc:${d.total_gex>=0?'var(--green)':'var(--red)'}"><div class="l">Total GEX</div>
-     <div class="v ${sgn(d.total_gex)}">$${fmt(d.total_gex)}</div><div class="s">${regime}</div></div>
-   <div class="kpi" style="--kc:var(--purple)"><div class="l">Zero Gamma</div><div class="v purp">${d.zero_gamma??'n/a'}</div>
-     <div class="s">${d.zero_gamma?(d.spot>d.zero_gamma?'spot above · bullish bias':'spot below · bearish bias'):''}</div></div>
-   <div class="kpi" style="--kc:var(--green)"><div class="l">Call Wall 🧱</div><div class="v pos">${d.call_wall??'—'}</div>
-     <div class="s">${d.call_wall?('+'+((d.call_wall/d.spot-1)*100).toFixed(1)+'% away'):''}</div></div>
-   <div class="kpi" style="--kc:var(--red)"><div class="l">Put Wall 🧱</div><div class="v neg">${d.put_wall??'—'}</div>
-     <div class="s">${d.put_wall?(((d.put_wall/d.spot-1)*100).toFixed(1)+'% away'):''}</div></div>
-   <div class="kpi" style="--kc:var(--cyan)"><div class="l">Theta Decay / day</div><div class="v cyan">$${fmt(d.daily_theta)}</div>
-     <div class="s">premium burning daily</div></div>`;
+    ?'<span class="pos">▲ POSITIVE γ · volatility suppressed</span>'
+    :'<span class="neg">▼ NEGATIVE γ · volatility amplified</span>';
+  ch.innerHTML=`
+   <div class="chip"><div class="cl">${CUR} spot</div><div class="cv">$${d.spot}</div><div class="cs">last price</div></div>
+   <div class="chip"><div class="cl">net gex</div><div class="cv ${sn(d.total_gex)}">$${fmt(d.total_gex)}</div><div class="cs">${regime}</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--pur)"></span>zero gamma</div><div class="cv pur">${d.zero_gamma??'—'}</div><div class="cs">γ flip level</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--yel)"></span>HVL</div><div class="cv yel">${highestVol(d)??'—'}</div><div class="cs">highest volume strike</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--grn)"></span>call wall</div><div class="cv pos">${d.call_wall??'—'}</div><div class="cs">${d.call_wall?(''+((d.call_wall/d.spot-1)*100).toFixed(1)+'% above'):''}</div></div>
+   <div class="chip"><div class="cl"><span class="sw" style="background:var(--red)"></span>put wall</div><div class="cv neg">${d.put_wall??'—'}</div><div class="cs">${d.put_wall?(((d.put_wall/d.spot-1)*100).toFixed(1)+'% below'):''}</div></div>
+   <div class="chip"><div class="cl">theta / day</div><div class="cv cy">$${fmt(d.daily_theta)}</div><div class="cs">decay burn</div></div>`;
+  renderAll(d);
+}
 
-  const strikes=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b);
+function highestVol(d){
+  let bk=null,bv=-1;for(const[k,v]of Object.entries(d.volume_by_strike||{}))if(v>bv){bv=v;bk=k;}return bk;
+}
+
+function renderAll(d){
+  const strikes=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b)
+    .filter(k=>k>d.spot*0.85&&k<d.spot*1.15); // focus window like gexbot
   const labels=strikes.map(String);
-  const gexArr=strikes.map(k=>d.gex_by_strike[String(k)]||0);
+  const gv=labels.map(s=>d.gex_by_strike[s]||0);
 
-  /* cumulative profile */
-  let cum=0;const cumArr=gexArr.map(v=>cum+=v);
+  /* ── MAIN horizontal chart with level lines drawn via plugin ── */
+  const lvl={cw:d.call_wall,pw:d.put_wall,zg:d.zero_gamma,hvl:highestVol(d)};
+  mk('gexMain',{data:{labels,datasets:[
+      {type:'bar',label:'callγ',data:gv.map(v=>v>0?v:0),backgroundColor:'rgba(47,213,124,.75)',borderRadius:2,borderSkipped:false,barPercentage:.82},
+      {type:'bar',label:'putγ',data:gv.map(v=>v<0?v:0),backgroundColor:'rgba(255,82,102,.75)',borderRadius:2,borderSkipped:false,barPercentage:.82}]},
+    options:base({plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: $${fmt(c.raw)}`}},
+      annotation:null}})});
 
-  mk('gexChart',{data:{labels,datasets:[
-      {type:'bar',label:'Call GEX',data:gexArr.map(v=>v>0?v:null),backgroundColor:'rgba(0,224,140,.55)',borderRadius:2,borderSkipped:false},
-      {type:'bar',label:'Put GEX',data:gexArr.map(v=>v<0?v:null),backgroundColor:'rgba(255,77,103,.55)',borderRadius:2,borderSkipped:false},
-      spotLine(labels)]},options:baseOpts()});
+  // draw level lines over the canvas
+  drawLevels('gexMain',lvl,labels,d);
 
-  mk('profileChart',{data:{labels,datasets:[
-      {type:'line',label:'Cumulative GEX',data:cumArr,borderColor:cumArr.at(-1)>=0?'#00e08c':'#ff4d67',
-       backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,300);g.addColorStop(0,'rgba(61,123,255,.25)');g.addColorStop(1,'rgba(61,123,255,0)');return g;},
-       fill:true,tension:.35,pointRadius:0,borderWidth:2},
-      {type:'line',label:'Zero',data:labels.map(()=>0),borderColor:'#5a6784',borderDash:[4,4],pointRadius:0,borderWidth:1},
-      spotLine(labels)]},options:baseOpts()});
-
-  const ranked=strikes.map(k=>({k,v:gexArr[strikes.indexOf(k)]})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,14);
-  const mx=Math.max(...ranked.map(r=>Math.abs(r.v)),1);
-  document.getElementById('flowList').innerHTML=ranked.map(r=>{
+  /* rank */
+  const rk=Object.keys(d.gex_by_strike).map(k=>({k:+k,v:d.gex_by_strike[k]}))
+    .sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,15);
+  const mx=Math.max(...rk.map(r=>Math.abs(r.v)),1);
+  $('rank').innerHTML=rk.map(r=>{
     const w=Math.max(Math.abs(r.v)/mx*100,2);
-    return `<div class="flowrow"><div class="stk">${r.k}</div><div class="barzone"><div class="bar" style="width:${w}%;background:${r.v>=0?'linear-gradient(90deg,#00e08c55,#00e08c)':'linear-gradient(90deg,#ff4d6755,#ff4d67)'}"></div></div><div class="val ${sgn(r.v)}">${fmt(r.v)}</div></div>`;
+    const tags=(r.k==lvl.cw?'<span class="tagl t-cw">CW</span> ':'')+(r.k==lvl.pw?'<span class="tagl t-pw">PW</span> ')+(r.k==lvl.zg?'<span class="tagl t-zg">ZG</span>':'');
+    return `<div class="legend" style="margin:0 0 7px"><span class="mono" style="width:58px;text-align:right;font-weight:600">${r.k}</span>
+      <span style="flex:1;height:14px;background:#0d0d11;border-radius:3px;overflow:hidden;display:block;position:relative">
+      <span style="position:absolute;inset:0 auto 0 ${r.v>=0?'50%':''};left:${r.v>=0?'':0};width:${w/2}%;${r.v>=0?'left:50%;background:linear-gradient(90deg,#2fd57c66,#2fd57c)':'right:50%;background:linear-gradient(-90deg,#ff526666,#ff5266)'}"></span>
+      <span style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:#2a2a32"></span></span>
+      <span class="mono ${sn(r.v)}" style="width:70px;text-align:right">${fmt(r.v)}</span><span style="width:44px">${tags}</span></div>`;
   }).join('');
 
-  function line(id,key,color){mk(id,{data:{labels,datasets:[
-      {type:'line',label:key.replace('_by_strike','').toUpperCase(),data:strikes.map(k=>d[key][kstr(k)]||0),
-       borderColor:color,backgroundColor:color+'1e',fill:true,tension:.35,pointRadius:0,borderWidth:2},
-      spotLine(labels)]},options:baseOpts()});}
-  line('dexChart','dex_by_strike','#3d7bff');
-  line('vexChart','vex_by_strike','#f472b6');
-  line('thetaChart','theta_by_strike','#fb923c');
+  /* vertical charts (keep x = strike for these) */
+  function vline(id,key,color){
+    mk(id,{data:{labels,datasets:[{type:'line',data:labels.map(s=>d[key][ks(s)]||0),borderColor:color,
+      backgroundColor:color+'20',fill:true,tension:.35,pointRadius:0,borderWidth:2}]},options:(()=>{const o=base();o.indexAxis='x';o.scales={x:{ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}},y:{ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}}};o.plugins.legend.display=false;return o;})()});
+  }
+  vline('dexC','dex_by_strike','#4b7bff');
+  vline('vexC','vex_by_strike','#b48cff');
+  vline('chaC','theta_by_strike','#3ed6e0');
 
-  mk('ivChart',{data:{labels,datasets:[
-      {type:'line',yAxisID:'y1',label:'IV %',data:strikes.map(k=>(d.iv_by_strike[kstr(k)]||0)*100),borderColor:'#a78bfa',tension:.35,pointRadius:0,borderWidth:2},
-      {type:'bar',yAxisID:'y',label:'Volume',data:strikes.map(k=>d.volume_by_strike[kstr(k)]||0),backgroundColor:'rgba(61,123,255,.4)',borderRadius:2}]},
-    options:(()=>{const o=baseOpts();o.scales.y1={position:'right',ticks:{color:'#a78bfa'},grid:{drawOnChartArea:false}};return o;})()});
+  mk('ivC',{data:{labels,datasets:[{type:'line',yAxisID:'y1',label:'IV%',data:labels.map(s=>(d.iv_by_strike[ks(s)]||0)*100),borderColor:'#ff9838',tension:.4,pointRadius:0,borderWidth:2},
+    {type:'bar',yAxisID:'y',label:'Vol',data:labels.map(s=>d.volume_by_strike[ks(s)]||0),backgroundColor:'rgba(255,255,255,.14)',borderRadius:2}]},
+    options:(()=>{const o=base();o.indexAxis='x';o.scales.x={ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}};o.scales.y={ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}};o.scales.y1={position:'right',ticks:{color:'#ff9838'},grid:{drawOnChartArea:false}};o.plugins.legend={labels:{color:'#9a9aa6',boxWidth:8,font:{size:10}}};return o;})()});
 
-  mk('cpChart',{data:{labels,datasets:[
-      {type:'bar',label:'Calls OI',stack:'s',data:strikes.map(k=>{const o=d.oi_by_strike[kstr(k)]||0;return o?o/2:0}),backgroundColor:'rgba(0,224,140,.5)',borderRadius:{topLeft:2,topRight:2}},
-      {type:'bar',label:'Puts OI',stack:'s',data:strikes.map(k=>{const o=d.oi_by_strike[kstr(k)]||0;return o?-o/2:0}),backgroundColor:'rgba(255,77,103,.5)',borderRadius:{bottomLeft:2,bottomRight:2}},
-      spotLine(labels)]},options:baseOpts()});
+  mk('oiC',{data:{labels,datasets:[
+    {type:'bar',stack:'s',label:'Calls OI',data:labels.map(s=>{const o=d.oi_by_strike[ks(s)]||0;return o?o/2:0}),backgroundColor:'rgba(47,213,124,.65)',borderRadius:2},
+    {type:'bar',stack:'s',label:'Puts OI',data:labels.map(s=>{const o=d.oi_by_strike[ks(s)]||0;return o?-o/2:0}),backgroundColor:'rgba(255,82,102,.65)',borderRadius:2}]},
+    options:(()=>{const o=base();o.indexAxis='x';o.scales.x={ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'},stacked:true};o.scales.y={ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'},stacked:true};o.plugins.legend={labels:{color:'#9a9aa6',boxWidth:8,font:{size:10}}};return o;})()});
 
   const exps=Object.keys(d.net_gex_by_expiry);
-  mk('expChart',{data:{labels:exps,datasets:[{type:'bar',label:'Net GEX',borderRadius:4,
-      data:exps.map(e=>d.net_gex_by_expiry[e]),
-      backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(0,224,140,.55)':'rgba(255,77,103,.55)')}]},options:baseOpts()});
+  mk('expC',{data:{labels:exps,datasets:[{type:'bar',data:exps.map(e=>d.net_gex_by_expiry[e]),borderRadius:3,
+    backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(47,213,124,.7)':'rgba(255,82,102,.7)')}]},
+    options:(()=>{const o=base();o.indexAxis='x';o.scales={x:{ticks:{color:'#9a9aa6',font:{size:9.5}},grid:{color:'#101014'}},y:{ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}}};return o;})()});
 
-  renderTable(d,strikes);
-  drawHeatmap(d);
+  drawHeat(d);
+  table(d,Object.keys(d.gex_by_strike).map(Number));
 }
 
-/* ── Gamma heatmap: strikes (rows) × expiries (cols) ── */
-let heatState=null;
-function drawHeatmap(d){
-  const cv=document.getElementById('heatCanvas');
-  const wrap=document.getElementById('heatwrap');
-  const exps=Object.keys(d.gex_matrix||{});
+/* overlay level lines + labels on main chart canvas */
+function drawLevels(id,lvl,labels,d){
+  const cv=$(id);
+  // remove old overlay
+  let ov=document.getElementById(id+'-ov');if(ov)ov.remove();
+  const r=cv.getBoundingClientRect(),ph=r.height||340,pw=r.width;
+  ov=document.createElement('div');ov.id=id+'-ov';ov.style.cssText=`position:absolute;inset:0;pointer-events:none`;
+  cv.parentElement.style.position='relative';cv.parentElement.appendChild(ov);
+  // chart area approximations: left pad ~56px, right pad ~10, top 8, bottom 30
+  const L=56,R=pw-10,T=8,B=ph-30,H=B-T;
+  const iOf=v=>labels.indexOf(String(v));
+  function line(v,color,name){
+    const i=iOf(v);if(i<0)return;
+    const y=T+(i+.5)/labels.length*H;
+    const e=document.createElement('div');
+    e.style.cssText=`position:absolute;left:${L}px;right:${pw-R}px;top:${y}px;border-top:1.5px dashed ${color}`;
+    const lb=document.createElement('span');
+    lb.textContent=name+' '+v;
+    lb.style.cssText=`position:absolute;right:4px;top:-9px;font:600 10px 'IBM Plex Mono';color:${color};background:#0a0a0cd8;padding:1px 6px;border-radius:3px;border:1px solid ${color}55`;
+    e.appendChild(lb);ov.appendChild(e);
+  }
+  line(lvl.hvl,'#ffc94d','HVL');line(lvl.zg,'#b48cff','ZG');line(lvl.cw,'#2fd57c','CW');line(lvl.pw,'#ff5266','PW');
+  // spot
+  const below=labels.filter(s=>+s<=d.spot).length;
+  if(below&&below<labels.length){
+    const lo=+labels[below-1],hi=+labels[below],t=(d.spot-lo)/(hi-lo);
+    const y=T+(below-1+t+.5)/labels.length*H;
+    const e=document.createElement('div');
+    e.style.cssText=`position:absolute;left:${L}px;right:${pw-R}px;top:${y}px;border-top:1.5px solid #ffffffaa`;
+    const lb=document.createElement('span');lb.textContent='SPOT '+d.spot;
+    lb.style.cssText=`position:absolute;right:4px;top:-9px;font:600 10px 'IBM Plex Mono';color:#fff;background:#0a0a0ce0;padding:1px 6px;border-radius:3px`;
+    e.appendChild(lb);ov.appendChild(e);
+  }
+}
+
+/* heatmap */
+let HS=null;
+function drawHeat(d){
+  const cv=$('heat'),exps=Object.keys(d.gex_matrix||{});
   if(!exps.length){cv.width=0;return;}
-  // union of strikes sorted, keep those within ±20% of spot
-  const sset=new Set();
-  exps.forEach(e=>Object.keys(d.gex_matrix[e]).forEach(k=>sset.add(+k)));
-  let all=[...sset].sort((a,b)=>a-b).filter(k=>k>d.spot*0.8&&k<d.spot*1.2);
-  if(all.length>40)all=all.filter((_,i)=>i%Math.ceil(all.length/40)===0);
-  const maxAbs=Math.max(...all.map(k=>exps.map(e=>Math.abs(d.gex_matrix[e][String(k)]||0))).flat(),1e-9);
-
-  const cellH=22,lblW=64,hdrH=26,topPad=6;
-  const cellW=76;
-  const W=lblW+exps.length*cellW+10,H=hdrH+topPad+all.length*cellH+6;
-  const dpr=window.devicePixelRatio||1;
-  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
-  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
-  ctx.clearRect(0,0,W,H);
-  ctx.font="10.5px 'JetBrains Mono',monospace";
-
-  // headers
-  ctx.textAlign='center';ctx.fillStyle='#5a6784';
-  exps.forEach((e,j)=>ctx.fillText(e.slice(5),lblW+j*cellW+cellW/2,hdrH-9));
-  // row labels
-  ctx.textAlign='right';
-  all.forEach((k,i)=>{
-    const y=hdrH+topPad+i*cellH;
-    ctx.fillStyle=k===CUR_SPOT?'#ffb020':'#5a6784';
-    ctx.fillText(String(k),lblW-8,y+cellH/2+4);
-  });
-  // cells
-  heatState={all,exps,lblW,hdrH,topPad,cellW,cellH,d,maxAbs};
-  all.forEach((k,i)=>{
-    const y=hdrH+topPad+i*cellH;
-    exps.forEach((e,j)=>{
-      const v=d.gex_matrix[e][String(k)]||0;
-      const t=Math.pow(Math.min(Math.abs(v)/maxAbs,1),0.55)*0.85;
-      ctx.fillStyle=v>=0?`rgba(0,224,140,${t})`:`rgba(255,77,103,${t})`;
-      const x=lblW+j*cellW+3;
-      ctx.beginPath();ctx.roundRect(x,y+2,cellW-6,cellH-4,4);ctx.fill();
-      if(Math.abs(v)/maxAbs>0.35){
-        ctx.fillStyle='#04060c99';ctx.textAlign='center';
-        ctx.fillText(fmt(v),x+(cellW-6)/2,y+cellH/2+4);
-      }
-    });
-  });
+  const set=new Set();exps.forEach(e=>Object.keys(d.gex_matrix[e]).forEach(k=>set.add(+k)));
+  let all=[...set].sort((a,b)=>a-b).filter(k=>k>d.spot*.85&&k<d.spot*1.15);
+  if(all.length>36)all=all.filter((_,i)=>i%Math.ceil(all.length/36)===0);
+  const mx=Math.max(...all.map(k=>exps.map(e=>Math.abs(d.gex_matrix[e][String(k)]||0))).flat(),1e-9);
+  const cw=74,chh=21,LW=60,HH=25,P=4;
+  const W=LW+exps.length*cw+8,H=HH+P+all.length*chh+4;
+  const dp=devicePixelRatio||1;cv.width=W*dp;cv.height=H*dp;cv.style.width=W+'px';cv.style.height=H+'px';
+  const c=cv.getContext('2d');c.scale(dp,dp);c.clearRect(0,0,W,H);c.font="10px 'IBM Plex Mono'";
+  c.textAlign='center';c.fillStyle='#5f5f6b';
+  exps.forEach((e,j)=>c.fillText(e.slice(5),LW+j*cw+cw/2,HH-8));
+  c.textAlign='right';
+  all.forEach((k,i)=>{c.fillStyle=k===SPOT?'#ffc94d':'#5f5f6b';c.fillText(k,LW-7,HH+P+i*chh+chh/2+3.5)});
+  HS={all,exps,LW,HH,P,cw,chh,d,mx};
+  all.forEach((k,i)=>{const y=HH+P+i*chh;
+    exps.forEach((e,j)=>{const v=d.gex_matrix[e][String(k)]||0;
+      const t=Math.pow(Math.min(Math.abs(v)/mx,1),.55)*.85;
+      c.fillStyle=v>=0?`rgba(47,213,124,${t})`:`rgba(255,82,102,${t})`;
+      c.beginPath();c.roundRect(LW+j*cw+2,y+2,cw-4,chh-4,3);c.fill();});});
 }
-
-document.getElementById('heatCanvas').addEventListener('mousemove',ev=>{
-  if(!heatState)return;
-  const r=ev.target.getBoundingClientRect();
-  const x=ev.clientX-r.left,y=ev.clientY-r.top;
-  const j=Math.floor((x-heatState.lblW)/heatState.cellW);
-  const i=Math.floor((y-heatState.hdrH-heatState.topPad)/heatState.cellH);
-  const tip=document.getElementById('heatTip');
-  if(j>=0&&j<heatState.exps.length&&i>=0&&i<heatState.all.length){
-    const k=heatState.all[i],e=heatState.exps[j];
-    const v=heatState.d.gex_matrix[e][String(k)]||0;
-    tip.innerHTML=`<b style="color:#fff">${k}</b> · ${e} · <span class="${sgn(v)}">$${fmt(v)}</span>`;
-  } else tip.innerHTML='&nbsp;';
+$('heat').addEventListener('mousemove',ev=>{
+  if(!HS)return;const r=ev.target.getBoundingClientRect();
+  const j=Math.floor((ev.clientX-r.left-HS.LW)/HS.cw),i=Math.floor((ev.clientY-r.top-HS.HH-HS.P)/HS.chh);
+  const tip=$('heatTip');
+  if(j>=0&&j<HS.exps.length&&i>=0&&i<HS.all.length){
+    const k=HS.all[i],e=HS.exps[j],v=HS.d.gex_matrix[e][String(k)]||0;
+    tip.innerHTML=`<b style="color:#fff">${k}</b> · ${e} · <span class="${sn(v)}">$${fmt(v)}</span>`;
+  }else tip.innerHTML='&nbsp;';
 });
-document.getElementById('heatCanvas').addEventListener('mouseleave',()=>{document.getElementById('heatTip').innerHTML='&nbsp;';});
 
-/* thermal coloring for table cells */
-function heat(v,max,min=0){
-  if(!v||!isFinite(v))return '';
-  const t=Math.min(Math.abs(v)/max,1)*0.42;
-  return v>=0?`background:rgba(0,224,140,${t})`:`background:rgba(255,77,103,${t})`;
-}
-
-function renderTable(d,strikes){
-  let rows=strikes.map(k=>({k,g:d.gex_by_strike[String(k)]||0,dx:d.dex_by_strike[String(k)]||0,vx:d.vex_by_strike[String(k)]||0,th:d.theta_by_strike[String(k)]||0,iv:(d.iv_by_strike[String(k)]||0)*100,v:d.volume_by_strike[String(k)]||0,oi:d.oi_by_strike[String(k)]||0}));
+function table(d,st){
+  let rows=st.map(k=>({k,g:d.gex_by_strike[String(k)]||0,dx:d.dex_by_strike[String(k)]||0,vx:d.vex_by_strike[String(k)]||0,th:d.theta_by_strike[String(k)]||0,iv:(d.iv_by_strike[String(k)]||0)*100,v:d.volume_by_strike[String(k)]||0,oi:d.oi_by_strike[String(k)]||0}));
   rows.sort((a,b)=>(a[sortKey]-b[sortKey])*sortDir*-1);
-  const mg=Math.max(...rows.map(r=>Math.abs(r.g)),1), mo=Math.max(...rows.map(r=>r.oi),1), mv=Math.max(...rows.map(r=>r.v),1);
-  document.querySelector('#tbl tbody').innerHTML=rows.slice(0,45).map(r=>
-    `<tr><td><b>${r.k}</b> ${r.k===d.spot?'<span class="pill s">SPOT</span>':''}${r.k==d.call_wall?' <span class="pill c">CW</span>':''}${r.k==d.put_wall?' <span class="pill p">PW</span>':''}</td>`+
-    `<td style="${heat(r.g,mg)}" class="${sgn(r.g)}">${fmt(r.g)}</td>`+
-    `<td>${fmt(r.dx)}</td><td>${fmt(r.vx)}</td><td>${fmt(r.th)}</td>`+
-    `<td class="purp">${r.iv.toFixed(1)}%</td>`+
-    `<td style="${heat(r.v,mv,0)}">${fmt(r.v)}</td>`+
-    `<td style="${heat(r.oi,mo,0)}"><b>${fmt(r.oi)}</b></td></tr>`).join('');
+  document.querySelector('#tbl tbody').innerHTML=rows.slice(0,50).map(r=>{
+    const tags=(r.k==d.call_wall?'<span class="tagl t-cw">CW</span> ':'')+(r.k==d.put_wall?'<span class="tagl t-pw">PW</span> ':'')
+      +(r.k==(highestVol(d)||NaN)?'<span class="tagl t-hvl">HVL</span> ':'')+(r.k==d.zero_gamma?'<span class="tagl t-zg">ZG</span>':'')
+      +(r.k==d.spot?' <span class="tagl t-sp">SPOT</span>':'');
+    return `<tr><td><b>${r.k}</b></td><td class="${sn(r.g)}">${fmt(r.g)}</td><td>${fmt(r.dx)}</td><td>${fmt(r.vx)}</td><td>${fmt(r.th)}</td><td class="pur">${r.iv.toFixed(1)}%</td><td>${fmt(r.v)}</td><td><b>${fmt(r.oi)}</b></td><td>${tags}</td></tr>`}).join('');
 }
-
 document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{
-  const k=th.dataset.k;
-  if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}
-  if(DATA&&CUR)renderTable(DATA.tickers[CUR],Object.keys(DATA.tickers[CUR].gex_by_strike).map(Number).sort((a,b)=>a-b));
+  const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}
+  if(DATA&&CUR)table(DATA.tickers[CUR],Object.keys(DATA.tickers[CUR].gex_by_strike).map(Number));
 });
 
 load();setInterval(load,60000);
