@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GEX Flow — History & Backtest</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  :root{--bg:#05070d;--card:#0e1422;--border:#1b2537;--border2:#243149;--text:#e8edf6;--muted:#7d8aa3;--dim:#55617a;
+    --green:#16d888;--red:#ff4d67;--accent:#3f8cff;--gold:#ffb020;--purple:#a78bfa}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  .topbar{background:#0a0f1c;border-bottom:1px solid var(--border);padding:10px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .logo{font-weight:800;font-size:17px;display:flex;gap:9px;align-items:center}
+  .logo .dot{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 180deg,var(--green),var(--accent),var(--purple),var(--green));display:grid;place-items:center;color:#fff;font-size:12px;font-weight:900}
+  .nav{display:flex;gap:6px;margin-left:auto}
+  .nav a{color:var(--muted);text-decoration:none;padding:6px 13px;border-radius:8px;font-size:12.5px;font-weight:700;border:1px solid var(--border)}
+  .nav a.active,.nav a:hover{border-color:var(--accent);color:#fff}
+  main{max-width:1500px;margin:0 auto;padding:18px 20px 70px}
+  .controls{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;gap:14px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+  .ctl label{display:block;font-size:10.5px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+  select,input{background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:7px 10px;border-radius:8px;font-size:13px}
+  button.run{background:linear-gradient(135deg,#16337a,#0f2350);border:1px solid var(--accent);color:#fff;font-weight:700;padding:8px 22px;border-radius:8px;cursor:pointer}
+  button.run:hover{box-shadow:0 0 14px #3f8cff44}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px}
+  .stat .l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+  .stat .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+  .pos{color:var(--green)}.neg{color:var(--red)}.gold{color:var(--gold)}.purp{color:var(--purple)}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 16px;margin-bottom:14px}
+  .panel h2{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:11px}
+  .cw{position:relative;height:340px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:right;padding:6px 9px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.8px}
+  #status{color:var(--muted);font-size:12.5px;margin-bottom:12px}
+  #dl{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><div class="dot">Γ</div>GEX<em style="font-style:normal;color:var(--muted)">·FLOW</em></div>
+  <div class="nav"><a href="./">Dashboard</a><a href="#" class="active">History & Backtest</a></div>
+</div>
+<main>
+  <div class="controls">
+    <div class="ctl"><label>Ticker</label><select id="tkSel"></select></div>
+    <div class="ctl"><label>From (UTC date)</label><input type="date" id="fromD"></div>
+    <div class="ctl"><label>To (UTC date)</label><input type="date" id="toD"></div>
+    <button class="run" onclick="run()">▶ Run Backtest</button>
+    <div class="ctl" style="margin-left:auto"><label>Export</label><span id="dl">—</span></div>
+  </div>
+  <div id="status">Loading history…</div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat"><div class="l">Snapshots</div><div class="v" id="stN">—</div></div>
+    <div class="stat"><div class="l">Spot Start → End</div><div class="v" id="stSpot">—</div></div>
+    <div class="stat"><div class="l">Move %</div><div class="v" id="stMove">—</div></div>
+    <div class="stat"><div class="l">Avg GEX</div><div class="v" id="stGex">—</div></div>
+    <div class="stat"><div class="l">% Time Positive GEX</div><div class="v purp" id="stPos">—</div></div>
+    <div class="stat"><div class="l">Zero Gamma Range</div><div class="v gold" id="stZg">—</div></div>
+    <div class="stat"><div class="l">GEX Regime Shifts</div><div class="v" id="stShifts">—</div></div>
+    <div class="stat"><div class="l">Max |GEX|</div><div class="v" id="stMax">—</div></div>
+  </div>
+
+  <div class="panel"><h2>Spot vs Total GEX (dual axis)</h2><div class="cw"><canvas id="mainChart"></canvas></div></div>
+  <div class="panel"><h2>Zero Gamma / Call Wall / Put Wall levels over time</h2><div class="cw"><canvas id="levelsChart"></canvas></div></div>
+  <div class="panel"><h2>Data Table</h2>
+    <div style="overflow:auto;max-height:420px"><table id="tbl"><thead><tr><th>Time (UTC)</th><th>Spot</th><th>Total GEX</th><th>Zero Gamma</th><th>Call Wall</th><th>Put Wall</th><th>Daily Theta</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</main>
+
+<script>
+let ALL={}; // {dayFile: [snaps]}
+let chart1=null,chart2=null;
+const $=id=>document.getElementById(id);
+const fmt=v=>{if(v==null||!isFinite(v))return'—';const a=Math.abs(v);
+ if(a>=1e12)return(v/1e12).toFixed(2)+'T';if(a>=1e9)return(v/1e9).toFixed(2)+'B';
+ if(a>=1e6)return(v/1e6).toFixed(2)+'M';if(a>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(2)};
+const cls=v=>v>=0?'pos':'neg';
+
+async function boot(){
+  // discover history files for the last 30 days
+  const today=new Date();
+  const days=[];
+  for(let i=0;i<30;i++){const d=new Date(today);d.setUTCDate(d.getUTCDate()-i);days.push(d.toISOString().slice(0,10));}
+  let loaded=[];
+  await Promise.all(days.map(async day=>{
+    try{const r=await fetch('data/history/'+day+'.json');if(r.ok){ALL[day]=await r.json();loaded.push(day);}}catch(e){}
+  }));
+  loaded.sort();
+  const n=Object.values(ALL).reduce((s,a)=>s+a.length,0);
+  $('status').textContent=n?`${n} snapshots across ${loaded.length} day(s) available.`:'No history yet — snapshots accumulate every minute during market hours while your PC runs the updater.';
+  // populate ticker select from any snap
+  const tks=new Set();
+  Object.values(ALL).forEach(arr=>arr.forEach(s=>Object.keys(s.tickers||{}).forEach(t=>tks.add(t))));
+  $('tkSel').innerHTML=[...tks].sort().map(t=>`<option>${t}</option>`).join('');
+  $('fromD').value=loaded[0]||today.toISOString().slice(0,10);
+  $('toD').value=today.toISOString().slice(0,10);
+}
+
+function collect(){
+  const f=$('fromD').value,t=$('toD').value,tk=$('tkSel').value;
+  const rows=[];
+  Object.keys(ALL).sort().forEach(day=>{
+    if(day<f||day>t)return;
+    ALL[day].forEach(s=>{const d=(s.tickers||{})[tk];if(d)rows.push({t:s.t,...d});});
+  });
+  return rows;
+}
+
+function run(){
+  const rows=collect();
+  if(!rows.length){$('status').textContent='No data in this range.';return;}
+  $('status').textContent=`${rows.length} snapshots · ${rows[0].t.slice(0,16)} → ${rows.at(-1).t.slice(0,16)} UTC`;
+  const ts=rows.map(r=>r.t);
+  const spot=rows.map(r=>r.spot);
+  const gex=rows.map(r=>r.total_gex);
+
+  // stats
+  const s0=rows[0].spot,s1=rows.at(-1).spot,mv=((s1-s0)/s0*100);
+  const avg=gex.reduce((a,b)=>a+b,0)/gex.length;
+  const posPct=gex.filter(g=>g>=0).length/gex.length*100;
+  let shifts=0;for(let i=1;i<gex.length;i++)if((gex[i]>=0)!==(gex[i-1]>=0))shifts++;
+  const zgs=rows.map(r=>r.zero_gamma).filter(v=>v!=null);
+  $('stN').textContent=rows.length;
+  $('stSpot').textContent=`${s0} → ${s1}`;
+  const mvEl=$('stMove');mvEl.textContent=(mv>=0?'+':'')+mv.toFixed(2)+'%';mvEl.className='v '+(mv>=0?'pos':'neg');
+  const gEl=$('stGex');gEl.textContent='$'+fmt(avg);gEl.className='v '+cls(avg);
+  $('stPos').textContent=posPct.toFixed(0)+'%';
+  $('stZg').textContent=zgs.length?`${Math.min(...zgs)} – ${Math.max(...zgs)}`:'—';
+  const shEl=$('stShifts');shEl.textContent=shifts;shEl.className='v '+(shifts>gex.length*0.2?'neg':'pos');
+  $('stMax').textContent='$'+fmt(Math.max(...gex.map(Math.abs)));
+  $('stats').style.display='grid';
+
+  // export link
+  const blob=new Blob([JSON.stringify(rows,null,1)],{type:'application/json'});
+  $('dl').innerHTML=`<a href="${URL.createObjectURL(blob)}" download="${$('tkSel').value}_${$('fromD')}_${$('toD')}.json" style="color:var(--accent)">⬇ Download JSON</a>`;
+
+  const gridC='#131b2c';
+  const base={responsive:true,maintainAspectRatio:false,
+    scales:{x:{type:'time',time:{tooltipFormat:'MMM d HH:mm'},ticks:{color:'#55617a',font:{size:10}},grid:{color:gridC}},
+            y:{ticks:{color:'#7d8aa3',callback:v=>fmt(v)},grid:{color:gridC}}},
+    plugins:{legend:{labels:{color:'#aab6cc',boxWidth:10}}}};
+  const o2=JSON.parse(JSON.stringify(base));
+  o2.scales.y1={position:'right',ticks:{color:'#a78bfa',callback:v=>fmt(v)},grid:{drawOnChartArea:false}};
+
+  if(chart1)chart1.destroy();if(chart2)chart2.destroy();
+  chart1=new Chart($('mainChart'),{data:{datasets:[
+    {type:'line',label:'Spot',data:ts.map((t,i)=>({x:t,y:spot[i]})),borderColor:'#ffb020',yAxisID:'y1',pointRadius:0,borderWidth:2,tension:.2},
+    {type:'line',label:'Total GEX',data:ts.map((t,i)=>({x:t,y:gex[i]})),borderColor:gex[0]>=0?'#16d888':'#ff4d67',pointRadius:0,borderWidth:2,tension:.2,fill:true,backgroundColor:'rgba(63,140,255,.08)'}
+  ]},options:(()=>{const o=JSON.parse(JSON.stringify(base));o.scales.y1={position:'right',ticks:{color:'#ffb020'},grid:{drawOnChartArea:false}};return o;})()});
+
+  chart2=new Chart($('levelsChart'),{data:{datasets:[
+    {type:'line',label:'Zero Gamma',data:ts.map((t,i)=>({x:t,y:rows[i].zero_gamma??null})),borderColor:'#a78bfa',pointRadius:0,borderWidth:2,spanGaps:true},
+    {type:'line',label:'Call Wall',data:ts.map((t,i)=>({x:t,y:rows[i].call_wall??null})),borderColor:'#16d888',pointRadius:0,borderWidth:1.5,borderDash:[5,4],spanGaps:true},
+    {type:'line',label:'Put Wall',data:ts.map((t,i)=>({x:t,y:rows[i].put_wall??null})),borderColor:'#ff4d67',pointRadius:0,borderWidth:1.5,borderDash:[5,4],spanGaps:true},
+    {type:'line',label:'Spot',data:ts.map((t,i)=>({x:t,y:spot[i]})),borderColor:'#ffffff33',pointRadius:0,borderWidth:1.5}
+  ]},options:o2});
+
+  document.querySelector('#tbl tbody').innerHTML=rows.slice(-300).reverse().map(r=>
+    `<tr><td>${r.t.slice(0,19).replace('T',' ')}</td><td>${r.spot}</td><td class="${cls(r.total_gex)}">$${fmt(r.total_gex)}</td><td class="gold">${r.zero_gamma??'—'}</td><td class="pos">${r.call_wall??'—'}</td><td class="neg">${r.put_wall??'—'}</td><td>$${fmt(r.daily_theta)}</td></tr>`).join('');
+}
+
+boot();
+</script>
+</body>
+</html>

@@ -224,6 +224,38 @@ def main():
         json.dump(result, f)
     print(f"WROTE {out_path}")
 
+    # ── history archive for backtesting ──
+    hist_dir = os.path.join(OUT_DIR, "history")
+    os.makedirs(hist_dir, exist_ok=True)
+    now = dt.datetime.now(dt.timezone.utc)
+    snap = {
+        "t": now.isoformat(),
+        "tickers": {
+            label: {
+                "spot": d.get("spot"),
+                "total_gex": d.get("total_gex"),
+                "daily_theta": d.get("daily_theta"),
+                "zero_gamma": d.get("zero_gamma"),
+                "call_wall": d.get("call_wall"),
+                "put_wall": d.get("put_wall"),
+            }
+            for label, d in result["tickers"].items()
+            if "error" not in d
+        },
+    }
+    day_path = os.path.join(hist_dir, f"{now:%Y-%m-%d}.json")
+    try:
+        with open(day_path, encoding="utf-8") as f:
+            day = json.load(f)
+    except Exception:
+        day = []
+    day.append(snap)
+    tmp = day_path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(day, f)
+    os.replace(tmp, day_path)
+    print(f"HISTORY +{len(day)} snaps -> {day_path}")
+
 
 if __name__ == "__main__":
     main()
