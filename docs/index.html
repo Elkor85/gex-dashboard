@@ -38,6 +38,12 @@ nav .right{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:1
 
 .wrap{max-width:1480px;margin:0 auto;padding:18px 22px 80px}
 
+/* view tabs */
+.tabsbar{max-width:1480px;margin:14px auto 0;padding:0 22px;display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tb{background:none;border:none;color:var(--mut);font:500 13px 'IBM Plex Sans';padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent}
+.tb:hover{color:var(--tx)}
+.tb.on{color:#fff;border-bottom-color:var(--blu);font-weight:600}
+
 /* ticker rail */
 .rail{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:16px}
 .tk{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);color:var(--mut);padding:8px 13px;border-radius:8px;
@@ -108,6 +114,17 @@ footer a{color:var(--mut)}
   </div>
 </nav>
 
+<div class="tabsbar" id="tabsBar">
+  <button class="tb on" data-tab="oi">Open Interest</button>
+  <button class="tb" data-tab="vol">Volume</button>
+  <button class="tb" data-tab="skew">Volatility Skew</button>
+  <button class="tb" data-tab="gex">Gamma Exposure</button>
+  <button class="tb" data-tab="dex">Delta Exposure</button>
+  <button class="tb" data-tab="vex">Vanna</button>
+  <button class="tb" data-tab="theta">Theta / Charm</button>
+  <button class="tb" data-tab="all">Dashboard All-in-One</button>
+</div>
+
 <div class="wrap">
   <div id="err"></div>
   <div class="rail" id="rail"></div>
@@ -116,7 +133,8 @@ footer a{color:var(--mut)}
   <div class="grid">
 
     <!-- MAIN: horizontal GEX-by-strike chart like gexbot -->
-    <div class="card c8">
+    <div class="card c6" data-view="skew"><h3>Volatility Skew <small>call IV vs put IV by strike</small></h3><div class="cw h230"><canvas id="skewC"></canvas></div></div>
+<div class="card" data-view="gex" c8">
       <h3>GEX by Strike <small>$ gamma per 1% move · classified dealer levels</small></h3>
       <div class="cw h320"><canvas id="gexMain"></canvas></div>
       <div class="legend">
@@ -128,21 +146,21 @@ footer a{color:var(--mut)}
       </div>
     </div>
 
-    <div class="card c4">
+    <div class="card" data-view="gex" c4">
       <h3>Largest Gamma Strikes <small>net |GEX| ranking</small></h3>
       <div style="max-height:340px;overflow-y:auto" id="rank"></div>
     </div>
 
-    <div class="card c4"><h3>DEX by Strike <small>delta exposure</small></h3><div class="cw h230"><canvas id="dexC"></canvas></div></div>
-    <div class="card c4"><h3>Vanna Exposure <small>VEX</small></h3><div class="cw h230"><canvas id="vexC"></canvas></div></div>
-    <div class="card c4"><h3>Charm / Theta Decay <small>per day</small></h3><div class="cw h230"><canvas id="chaC"></canvas></div></div>
+    <div class="card" data-view="dex" c4"><h3>DEX by Strike <small>delta exposure</small></h3><div class="cw h230"><canvas id="dexC"></canvas></div></div>
+    <div class="card" data-view="vex" c4"><h3>Vanna Exposure <small>VEX</small></h3><div class="cw h230"><canvas id="vexC"></canvas></div></div>
+    <div class="card" data-view="theta" c4"><h3>Charm / Theta Decay <small>per day</small></h3><div class="cw h230"><canvas id="chaC"></canvas></div></div>
 
-    <div class="card c4"><h3>IV Term Structure by Strike</h3><div class="cw h230"><canvas id="ivC"></canvas></div></div>
-    <div class="card c4"><h3>Open Interest Walls</h3><div class="cw h230"><canvas id="oiC"></canvas></div></div>
-    <div class="card c4"><h3>Call vs Put — OI & Volume by Strike <small>grouped bars</small></h3><div class="cw h230"><canvas id="cpSplitC"></canvas></div></div>
-    <div class="card c4"><h3>Net GEX per Expiry</h3><div class="cw h230"><canvas id="expC"></canvas></div></div>
+    <div class="card" data-view="skew" c4"><h3>IV Term Structure by Strike</h3><div class="cw h230"><canvas id="ivC"></canvas></div></div>
+    <div class="card" data-view="oi" c4"><h3>Open Interest Walls</h3><div class="cw h230"><canvas id="oiC"></canvas></div></div>
+    <div class="card" data-view="oi" c4"><h3>Call vs Put — OI & Volume by Strike <small>grouped bars</small></h3><div class="cw h230"><canvas id="cpSplitC"></canvas></div></div>
+    <div class="card" data-view="all" c4"><h3>Net GEX per Expiry</h3><div class="cw h230"><canvas id="expC"></canvas></div></div>
 
-    <div class="card c12">
+    <div class="card" data-view="gex"  c12">
       <h3>Gamma Heatmap — Strike × Expiry <small>hover for values</small></h3>
       <div style="overflow-x:auto"><canvas id="heat" style="display:block"></canvas></div>
       <div style="display:flex;gap:10px;align-items:center;margin-top:10px;font-size:11px;color:var(--dim)">
@@ -438,8 +456,17 @@ function renderAll(d){
     {type:'line',label:'Put Vol',data:cpl.map(k=>cpV[String(k)]?.p||0),borderColor:'#ff5266',borderDash:[5,4],pointRadius:0,borderWidth:1.5,tension:.3}]},
     options:(()=>{const o=base();o.indexAxis='x';o.scales.x={ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}};o.scales.y={ticks:{color:'#9a9aa6',callback:v=>fmt(v),font:{size:10}},grid:{color:'#141419'}};o.plugins.zoom=ZOOM;o.plugins.legend={labels:{color:'#9a9aa6',boxWidth:8,font:{size:10}}};return o;})()});
 
+  // volatility skew curve
+  const ivs=strikes.filter(k=>d.iv_by_strike[String(k)]>0).map(k=>({k,iv:d.iv_by_strike[String(k)]*100}));
+  mk('skewC',{data:{labels:ivs.map(x=>String(x.k)),datasets:[
+    {type:'line',label:'IV %',data:ivs.map(x=>x.iv),borderColor:'#ff9838',backgroundColor:'#ff983820',fill:true,tension:.4,pointRadius:2,borderWidth:2},
+    {type:'line',label:'25Δ approx put skew',data:ivs.map((x,i)=>Math.max(...ivs.map(y=>y.iv))*0+ x.iv*(1+0.15*Math.tanh((SPOT-x.k)/(SPOT*0.05)))),borderColor:'#ff526688',pointRadius:0,borderWidth:1.5,borderDash:[4,4]},
+    {type:'line',label:'25Δ approx call skew',data:ivs.map(x=>x.iv*(1-0.10*Math.tanh((SPOT-x.k)/(SPOT*0.05)))),borderColor:'#2fd57c88',pointRadius:0,borderWidth:1.5,borderDash:[4,4]}]},
+    options:(()=>{const o=base();o.indexAxis='x';o.scales={x:{ticks:{color:'#5f5f6b',maxRotation:90,font:{size:9,family:"'IBM Plex Mono'"}},grid:{color:'#101014'}},y:{ticks:{color:'#9a9aa6',callback:v=>v.toFixed(0)+'%',font:{size:10}},grid:{color:'#141419'}}};o.plugins.zoom=ZOOM;o.plugins.legend={labels:{color:'#9a9aa6',boxWidth:8,font:{size:10}}};return o;})()});
+
   drawHeat(d);
   table(d,Object.keys(d.gex_by_strike).map(Number));
+  applyView();
 }
 
 /* overlay level lines + labels on main chart canvas */
@@ -535,6 +562,20 @@ uz.onchange=()=>{localStorage.setItem('gex_ui_zoom',uz.value);document.documentE
 document.addEventListener('dblclick',e=>{
   const cv=e.target.closest('canvas');if(!cv)return;
   for(const[id,ch]of Object.entries(charts)){if(ch.canvas===cv&&ch.resetZoom){ch.resetZoom();break;}}
+});
+
+let VIEW='oi';
+function applyView(){
+  document.querySelectorAll('[data-view]').forEach(c=>{
+    c.style.display=(VIEW==='all'||c.dataset.view===VIEW)?'':'none';
+  });
+  // charts inside hidden canvases need resize when shown
+  setTimeout(()=>{Object.values(charts).forEach(ch=>ch.resize());},30);
+}
+document.querySelectorAll('.tb').forEach(b=>b.onclick=()=>{
+  VIEW=b.dataset.tab;
+  document.querySelectorAll('.tb').forEach(x=>x.classList.toggle('on',x===b));
+  applyView();
 });
 
 load();setInterval(load,60000);
