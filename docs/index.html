@@ -3,114 +3,242 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GEX Dashboard — Options Flow Analytics</title>
+<title>GEX Flow — Professional Options Analytics</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg: #0b0e14; --card: #131722; --border: #232936;
-    --text: #e2e8f0; --muted: #8892a6;
-    --green: #22c55e; --red: #ef4444; --accent: #3b82f6; --gold: #f59e0b;
+  :root{
+    --bg:#05070d;--bg2:#0a0e18;--card:#0e1422;--card2:#111a2c;--border:#1b2537;--border2:#243149;
+    --text:#e8edf6;--muted:#7d8aa3;--dim:#55617a;
+    --green:#16d888;--red:#ff4d67;--accent:#3f8cff;--gold:#ffb020;--purple:#a78bfa;--pink:#f472b6;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
-  header { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; letter-spacing: .5px; }
-  header h1 span { color: var(--accent); }
-  #updated { color: var(--muted); font-size: 12px; margin-left: auto; }
-  #tickers { display: flex; gap: 6px; flex-wrap: wrap; }
-  .tk-btn { background: var(--bg); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all .15s; }
-  .tk-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  main { max-width: 1280px; margin: 0 auto; padding: 20px 24px 60px; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }
-  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
-  .stat .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .pos { color: var(--green); } .neg { color: var(--red); } .gold { color: var(--gold); }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media(max-width: 900px){ .grid{grid-template-columns:1fr;} }
-  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
-  .panel h2 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
-  .chart-wrap { position: relative; height: 320px; }
-  .wide { grid-column: 1 / -1; }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
-  th:first-child, td:first-child { text-align: left; }
-  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
-  tr:hover td { background: rgba(255,255,255,.02); }
-  #err { color: var(--red); padding: 12px 24px; display: none; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  ::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+  /* ── Top bar ── */
+  .topbar{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#0a0f1c,#0a0f1cf2);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:17px;letter-spacing:.5px}
+  .logo .dot{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 180deg,var(--green),var(--accent),var(--purple),var(--green));display:grid;place-items:center;color:#fff;font-size:12px;font-weight:900}
+  .logo em{font-style:normal;color:var(--muted);font-weight:600}
+  .clock{font-variant-numeric:tabular-nums;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--muted)}
+  .clock b{color:var(--green)}
+  #tickers{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+  .tk{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12.5px;font-weight:700;transition:.15s;position:relative}
+  .tk:hover{border-color:var(--border2);color:var(--text)}
+  .tk.active{background:linear-gradient(135deg,#16337a,#0f2350);border-color:var(--accent);color:#fff;box-shadow:0 0 14px #3f8cff33}
+  .tk .chg{display:block;font-size:10px;font-weight:600}
+
+  /* ── Market strip ── */
+  .strip{max-width:1500px;margin:14px auto 0;padding:0 20px}
+  .strip-in{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;gap:22px;flex-wrap:wrap;align-items:center}
+  .metric{min-width:110px}
+  .metric .l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:3px}
+  .metric .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+  .metric .s{font-size:11px;color:var(--muted)}
+  .sep{width:1px;height:34px;background:var(--border)}
+  .pulse{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;display:inline-block;margin-right:6px}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  main{max-width:1500px;margin:0 auto;padding:16px 20px 70px}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 16px;min-width:0}
+  .panel h2{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:11px;display:flex;justify-content:space-between;align-items:center}
+  .panel h2 .tag{font-size:10px;color:var(--dim);letter-spacing:0;text-transform:none}
+  .cw{position:relative;height:300px}.cw.sm{height:230px}
+  .col4{grid-column:span 4}.col6{grid-column:span 6}.col8{grid-column:span 8}.col12{grid-column:span 12}
+  @media(max-width:1150px){.col4,.col6,.col8{grid-column:span 12}}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:right;padding:7px 10px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;position:sticky;top:0;background:var(--card)}
+  tbody tr:hover td{background:#ffffff06}
+  .pos{color:var(--green)}.neg{color:var(--red)}.gold{color:var(--gold)}.purp{color:var(--purple)}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700}
+  .pill.c{background:#16d88818;color:var(--green)}.pill.p{background:#ff4d6718;color:var(--red)}
+
+  /* flow bars */
+  .flowrow{display:flex;align-items:center;gap:8px;margin-bottom:7px;font-size:12.5px}
+  .flowrow .stk{width:64px;font-weight:700;text-align:right}
+  .flowrow .barzone{flex:1;height:16px;position:relative;background:var(--bg2);border-radius:4px;overflow:hidden}
+  .flowrow .bar{height:100%;border-radius:4px}
+  .flowrow .val{width:74px;color:var(--muted);font-variant-numeric:tabular-nums;font-size:11.5px}
+
+  #err{display:none;color:var(--red);background:#ff4d6712;border:1px solid #ff4d6740;border-radius:10px;padding:12px 20px;margin:14px auto;max-width:1500px}
+  footer{max-width:1500px;margin:0 auto;padding:0 20px 30px;color:var(--dim);font-size:11.5px;line-height:1.7}
 </style>
 </head>
 <body>
-<header>
-  <h1>GEX<span>·</span>Dashboard</h1>
+
+<div class="topbar">
+  <div class="logo"><div class="dot">Γ</div>GEX<em>·FLOW</em></div>
+  <div class="clock" id="clock"></div>
   <div id="tickers"></div>
-  <div id="updated"></div>
-</header>
+</div>
 <div id="err"></div>
+
+<div class="strip"><div class="strip-in" id="strip"></div></div>
+
 <main>
-  <div class="stats">
-    <div class="stat"><div class="label">Spot</div><div class="value" id="s-spot">—</div></div>
-    <div class="stat"><div class="label">Total GEX</div><div class="value" id="s-gex">—</div></div>
-    <div class="stat"><div class="label">Zero Gamma</div><div class="value gold" id="s-zg">—</div></div>
-    <div class="stat"><div class="label">Call Wall</div><div class="value pos" id="s-cw">—</div></div>
-    <div class="stat"><div class="label">Put Wall</div><div class="value neg" id="s-pw">—</div></div>
-    <div class="stat"><div class="label">Daily Theta</div><div class="value" id="s-theta">—</div></div>
+<div class="grid">
+
+  <div class="panel col8"><h2>Gamma Exposure by Strike <span class="tag">$ per 1% move · walls marked</span></h2><div class="cw"><canvas id="gexChart"></canvas></div></div>
+
+  <div class="panel col4"><h2>Options Flow — Net GEX Leaders <span class="tag">top strikes by |GEX|</span></h2>
+    <div style="max-height:300px;overflow-y:auto" id="flowList"></div>
   </div>
-  <div class="grid">
-    <div class="panel wide"><h2>GEX by Strike ($ per 1% move)</h2><div class="chart-wrap"><canvas id="gexChart"></canvas></div></div>
-    <div class="panel"><h2>Delta Exposure by Strike</h2><div class="chart-wrap"><canvas id="dexChart"></canvas></div></div>
-    <div class="panel"><h2>Vanna Exposure by Strike</h2><div class="chart-wrap"><canvas id="vexChart"></canvas></div></div>
-    <div class="panel"><h2>Theta Exposure by Strike</h2><div class="chart-wrap"><canvas id="thetaChart"></canvas></div></div>
-    <div class="panel"><h2>IV & Volume by Strike</h2><div class="chart-wrap"><canvas id="ivChart"></canvas></div></div>
-    <div class="panel wide"><h2>Net GEX by Expiration</h2><div class="chart-wrap" style="height:220px;"><canvas id="expChart"></canvas></div></div>
-    <div class="panel wide"><h2>Strike Table (Top OI)</h2>
-      <div style="overflow-x:auto;"><table id="tbl"><thead><tr>
-        <th>Strike</th><th>GEX</th><th>DEX</th><th>VEX</th><th>Theta</th><th>IV</th><th>Volume</th><th>OI</th>
-      </tr></thead><tbody></tbody></table></div>
-    </div>
+
+  <div class="panel col4"><h2>Delta Exposure</h2><div class="cw sm"><canvas id="dexChart"></canvas></div></div>
+  <div class="panel col4"><h2>Vanna Exposure</h2><div class="cw sm"><canvas id="vexChart"></canvas></div></div>
+  <div class="panel col4"><h2>Theta Exposure</h2><div class="cw sm"><canvas id="thetaChart"></canvas></div></div>
+
+  <div class="panel col6"><h2>IV Smile & Volume</h2><div class="cw sm"><canvas id="ivChart"></canvas></div></div>
+  <div class="panel col6"><h2>Call vs Put Pressure by Strike <span class="tag">volume split</span></h2><div class="cw sm"><canvas id="cpChart"></canvas></div></div>
+
+  <div class="panel col12"><h2>Net GEX by Expiration</h2><div class="cw" style="height:190px"><canvas id="expChart"></canvas></div></div>
+
+  <div class="panel col12"><h2>Strike Matrix <span class="tag">sorted by OI · click column to sort</span></h2>
+    <div style="overflow-x:auto;max-height:420px;overflow-y:auto"><table id="tbl"><thead><tr>
+      <th data-k="k">Strike ▾</th><th data-k="g">GEX</th><th data-k="dx">DEX</th><th data-k="vx">VEX</th><th data-k="th">Theta</th><th data-k="iv">IV</th><th data-k="v">Volume</th><th data-k="oi">OI</th>
+    </tr></thead><tbody></tbody></table></div>
   </div>
+
+</div>
 </main>
+
+<footer>
+  Data: Yahoo Finance options chains · Greeks computed via Black-Scholes from quoted IVs.
+  Dealer-positioning assumption: customers long calls / short puts (naive GEX). SPX uses the SPY chain as proxy.
+  Not financial advice.
+</footer>
+
 <script>
-let DATA=null, CUR=null;
+let DATA=null, CUR=null, sortKey='oi', sortDir=-1;
 const charts={};
-function fmt(v){const a=Math.abs(v);if(a>=1e12)return (v/1e12).toFixed(2)+'T';if(a>=1e9)return (v/1e9).toFixed(2)+'B';if(a>=1e6)return (v/1e6).toFixed(2)+'M';if(a>=1e3)return (v/1e3).toFixed(1)+'K';return v.toFixed(2);}
-function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
-async function load(){try{const r=await fetch('data/gex_data.json?t='+Date.now());DATA=await r.json();document.getElementById('err').style.display='none';
-document.getElementById('updated').textContent='Updated '+new Date(DATA.updated_utc).toLocaleString();
-buildTabs();if(!CUR)selectTab(Object.keys(DATA.tickers)[0]);}catch(e){const el=document.getElementById('err');el.style.display='block';el.textContent='Failed to load data: '+e;}}
-function buildTabs(){const c=document.getElementById('tickers');c.innerHTML='';Object.keys(DATA.tickers).forEach(t=>{const b=document.createElement('button');b.className='tk-btn'+(t===CUR?' active':'');b.textContent=t;b.onclick=()=>selectTab(t);c.appendChild(b);});}
-function selectTab(t){CUR=t;buildTabs();render();}
-function render(){
- const d=DATA.tickers[CUR];if(!d||d.error){return;}
- document.getElementById('s-spot').textContent=d.spot??'—';
- const g=document.getElementById('s-gex');g.textContent=fmt(d.total_gex||0);g.className='value '+(d.total_gex>=0?'pos':'neg');
- document.getElementById('s-zg').textContent=d.zero_gamma??'n/a';
- document.getElementById('s-cw').textContent=d.call_wall??'n/a';
- document.getElementById('s-pw').textContent=d.put_wall??'n/a';
- document.getElementById('s-theta').textContent=fmt(d.daily_theta||0);
- const strikes=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b);
- const labels=strikes.map(String);
- const gexArr=strikes.map(k=>d.gex_by_strike[String(k)]||0);
- const spotLine={type:'line',label:'Spot',data:labels.map(()=>d.spot),borderColor:'#f59e0b',borderDash:[6,4],pointRadius:0,borderWidth:1.5,order:0};
- let zgLine=null;if(d.zero_gamma&&labels.map(Number).some(s=>Math.abs(s-d.zero_gamma)<strikes[1]-strikes[0]))zgLine={type:'line',label:'ZeroGamma',data:labels.map(()=>d.zero_gamma),borderColor:'#a78bfa',pointRadius:0,borderWidth:1.5};
- const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-   scales:{x:{ticks:{color:'#8892a6',maxRotation:90,font:{size:10}},grid:{color:'#1a2030'}},
-           y:{ticks:{color:'#8892a6',callback:v=>fmt(v)},grid:{color:'#1a2030'}}},
-   plugins:{legend:{labels:{color:'#e2e8f0',font:{size:11}}}}};
- mk('gexChart',{data:{labels,datasets:[{type:'bar',label:'Call GEX',data:gexArr.map(v=>v>0?v:0),backgroundColor:'rgba(34,197,94,.65)'},{type:'bar',label:'Put GEX',data:gexArr.map(v=>v<0?v:0),backgroundColor:'rgba(239,68,68,.65)'},spotLine,zgLine].filter(Boolean)},options:JSON.parse(JSON.stringify(base))});
- function lineChart(id,key,color){mk(id,{data:{labels,datasets:[{type:'line',label:key,data:strikes.map(k=>d[key][String(k)]||0),borderColor:color,backgroundColor:color+'33',fill:true,tension:.3,pointRadius:0,borderWidth:2},spotLine]},options:JSON.parse(JSON.stringify(base))});}
- lineChart('dexChart','dex_by_strike','#3b82f6');
- lineChart('vexChart','vex_by_strike','#f472b6');
- lineChart('thetaChart','theta_by_strike','#fb923c');
- mk('ivChart',{data:{labels,datasets:[{type:'line',label:'IV %',yAxisID:'y1',data:strikes.map(k=>(d.iv_by_strike[String(k)]||0)*100),borderColor:'#a78bfa',tension:.3,pointRadius:0,borderWidth:2},{type:'bar',yAxisID:'y',label:'Volume',data:strikes.map(k=>d.volume_by_strike[String(k)]||0),backgroundColor:'rgba(56,189,248,.5)'}]},
-   options:(()=>{const o=JSON.parse(JSON.stringify(base));o.scales.y1={position:'right',ticks:{color:'#a78bfa'},grid:{drawOnChartArea:false}};return o;})()});
- const exps=Object.keys(d.net_gex_by_expiry);
- mk('expChart',{data:{labels:exps,datasets:[{type:'bar',label:'Net GEX',data:exps.map(e=>d.net_gex_by_expiry[e]),backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(34,197,94,.65)':'rgba(239,68,68,.65)')}]},options:JSON.parse(JSON.stringify(base))});
- const rows=strikes.map(k=>({k,g:d.gex_by_strike[String(k)]||0,dx:d.dex_by_strike[String(k)]||0,vx:d.vex_by_strike[String(k)]||0,th:d.theta_by_strike[String(k)]||0,iv:(d.iv_by_strike[String(k)]||0)*100,v:d.volume_by_strike[String(k)]||0,oi:d.oi_by_strike[String(k)]||0}));
- rows.sort((a,b)=>b.oi-a.oi);
- document.querySelector('#tbl tbody').innerHTML=rows.slice(0,25).map(r=>`<tr><td>${r.k}</td><td class="${r.g>=0?'pos':'neg'}">${fmt(r.g)}</td><td>${fmt(r.dx)}</td><td>${fmt(r.vx)}</td><td>${fmt(r.th)}</td><td>${r.iv.toFixed(1)}%</td><td>${fmt(r.v)}</td><td>${fmt(r.oi)}</td></tr>`).join('');
+
+function fmt(v){const a=Math.abs(v);if(!isFinite(v))return'—';if(a>=1e12)return(v/1e12).toFixed(2)+'T';if(a>=1e9)return(v/1e9).toFixed(2)+'B';if(a>=1e6)return(v/1e6).toFixed(2)+'M';if(a>=1e3)return(v/1e3).toFixed(1)+'K';return v.toFixed(2);}
+function cls(v){return v>=0?'pos':'neg'}
+
+function tickClock(){
+  const now=new Date();
+  const et=now.toLocaleTimeString('en-US',{timeZone:'America/New_York',hour12:false});
+  const day=now.toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short'});
+  const h=parseInt(et.slice(0,2));
+  const open=(now.toLocaleDateString('en-US',{timeZone:'America/New_York'},) && ['Sat','Sun'].indexOf(day)<0 && h>=9 && h<16);
+  document.getElementById('clock').innerHTML=`${day} ${et} ET &nbsp;<b>${open?'● MARKET OPEN':'○ CLOSED'}</b>`;
 }
-load();setInterval(load,120000);
+setInterval(tickClock,1000);tickClock();
+
+async function load(){
+  try{
+    const r=await fetch('data/gex_data.json?t='+Date.now());
+    DATA=await r.json();
+    document.getElementById('err').style.display='none';
+    buildTabs();
+    if(!CUR||!DATA.tickers[CUR])selectTab(Object.keys(DATA.tickers)[0]);
+  }catch(e){
+    const el=document.getElementById('err');el.style.display='block';
+    el.textContent='Failed to load data: '+e;
+  }
+}
+
+function buildTabs(){
+  const c=document.getElementById('tickers');c.innerHTML='';
+  Object.keys(DATA.tickers).forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tk'+(t===CUR?' active':'');
+    const d=DATA.tickers[t];
+    b.innerHTML=t+(d&&d.spot&&!d.error?`<span class="chg">${d.spot}</span>`:'');
+    b.onclick=()=>selectTab(t);
+    c.appendChild(b);
+  });
+}
+
+function selectTab(t){CUR=t;buildTabs();render();}
+
+const baseOpts=extra=>{
+  const o={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    scales:{x:{ticks:{color:'#55617a',maxRotation:90,font:{size:9.5}},grid:{color:'#131b2c'}},
+            y:{ticks:{color:'#7d8aa3',callback:v=>fmt(v)},grid:{color:'#131b2c'}}},
+    plugins:{legend:{labels:{color:'#aab6cc',boxWidth:10,font:{size:10.5}}}}};
+  return Object.assign(o,extra||{});
+};
+function mk(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg);}
+function spotLine(labels,spot){return {type:'line',label:'Spot',data:labels.map(()=>spot),borderColor:'#ffb020',borderDash:[7,5],pointRadius:0,borderWidth:1.5,order:-1};}
+
+function render(){
+  const d=DATA.tickers[CUR];
+  if(!d||d.error){document.getElementById('strip').innerHTML='<div class="metric"><div class="l">'+CUR+'</div><div class="v neg">data error</div></div>';return;}
+
+  /* ── market strip ── */
+  const gexCls=d.total_gex>=0?'pos':'neg';
+  const regime=d.total_gex>=0?'<span class="s pos">▲ Positive / Suppressed vol</span>':'<span class="s neg">▼ Negative / Amplified vol</span>';
+  document.getElementById('strip').innerHTML=`
+    <div class="metric"><div class="l">${CUR} Spot</div><div class="v">${d.spot??'—'}</div></div><div class="sep"></div>
+    <div class="metric"><div class="l">Total GEX</div><div class="v ${gexCls}">$${fmt(d.total_gex)}</div>${regime}</div><div class="sep"></div>
+    <div class="metric"><div class="l">Zero Gamma</div><div class="v gold">${d.zero_gamma??'n/a'}</div></div><div class="sep"></div>
+    <div class="metric"><div class="l">Call Wall 🧱</div><div class="v pos">${d.call_wall??'—'}</div></div>
+    <div class="metric"><div class="l">Put Wall 🧱</div><div class="v neg">${d.put_wall??'—'}</div></div><div class="sep"></div>
+    <div class="metric"><div class="l">Daily Theta Decay</div><div class="v neg">$${fmt(d.daily_theta)}</div></div>
+    <div class="metric" style="margin-left:auto"><div class="l"><span class="pulse"></span>Live Feed</div>
+      <div class="s">${new Date(DATA.updated_utc).toLocaleString()}</div></div>`;
+
+  const strikes=Object.keys(d.gex_by_strike).map(Number).sort((a,b)=>a-b);
+  const labels=strikes.map(String);
+  const gexArr=strikes.map(k=>d.gex_by_strike[String(k)]||0);
+
+  /* ── GEX chart with wall markers ── */
+  const wallAnnot=[];
+  if(d.call_wall){const i=labels.indexOf(String(d.call_wall));if(i>=0)wallAnnot.push(i);}
+  mk('gexChart',{data:{labels,datasets:[
+      {type:'bar',label:'Call GEX',data:gexArr.map(v=>v>0?v:null),backgroundColor:'rgba(22,216,136,.6)',borderRadius:2},
+      {type:'bar',label:'Put GEX',data:gexArr.map(v=>v<0?v:null),backgroundColor:'rgba(255,77,103,.6)',borderRadius:2},
+      spotLine(labels,d.spot),
+      ...(d.zero_gamma&&labels.includes(String(Math.round(d.zero_gamma)))?[{type:'line',label:'Zero Gamma',data:labels.map(s=>Math.abs(s-d.zero_gamma)<(strikes[1]-strikes[0])/2?d.zero_gamma:null),borderColor:'#a78bfa',pointRadius:4,pointBackgroundColor:'#a78bfa',showLine:false}]:[])
+    ]},options:baseOpts()});
+
+  /* ── flow leaders ── */
+  const ranked=strikes.map(k=>({k,v:d.gex_by_strike[String(k)]||0})).sort((a,b)=>Math.abs(b.v)-Math.abs(a.v)).slice(0,14);
+  const mx=Math.max(...ranked.map(r=>Math.abs(r.v)),1);
+  document.getElementById('flowList').innerHTML=ranked.map(r=>{
+    const w=Math.max(Math.abs(r.v)/mx*100,2);
+    return `<div class="flowrow"><div class="stk">${r.k}</div><div class="barzone"><div class="bar" style="width:${w}%;background:${r.v>=0?'linear-gradient(90deg,#16d88888,#16d888)':'linear-gradient(90deg,#ff4d6788,#ff4d67)'}"></div></div><div class="val ${cls(r.v)}">${fmt(r.v)}</div></div>`;
+  }).join('');
+
+  function line(id,key,color){mk(id,{data:{labels,datasets:[{type:'line',label:key.replace('_by_strike',''),data:strikes.map(k=>d[key][String(k)]||0),borderColor:color,backgroundColor:color+'22',fill:true,tension:.35,pointRadius:0,borderWidth:2},spotLine(labels,d.spot)]},options:baseOpts()});}
+  line('dexChart','dex_by_strike','#3f8cff');
+  line('vexChart','vex_by_strike','#f472b6');
+  line('thetaChart','theta_by_strike','#fb923c');
+
+  mk('ivChart',{data:{labels,datasets:[
+      {type:'line',yAxisID:'y1',label:'IV %',data:strikes.map(k=>(d.iv_by_strike[String(k)]||0)*100),borderColor:'#a78bfa',tension:.35,pointRadius:0,borderWidth:2},
+      {type:'bar',yAxisID:'y',label:'Volume',data:strikes.map(k=>d.volume_by_strike[String(k)]||0),backgroundColor:'rgba(63,140,255,.45)',borderRadius:2}]},
+    options:(()=>{const o=baseOpts();o.scales.y1={position:'right',ticks:{color:'#a78bfa'},grid:{drawOnChartArea:false}};return o;})()});
+
+  /* call vs put pressure: calls above axis, puts below */
+  mk('cpChart',{data:{labels,datasets:[
+      {type:'bar',label:'Calls (OI)',data:strikes.map(k=>d.oi_by_strike[String(k)]?d.oi_by_strike[String(k)]/2:0),stack:'s',backgroundColor:'rgba(22,216,136,.55)',borderRadius:2},
+      {type:'bar',label:'Puts (OI)',data:strikes.map(k=>-(d.oi_by_strike[String(k)]?d.oi_by_strike[String(k)]/2:0)),stack:'s',backgroundColor:'rgba(255,77,103,.55)',borderRadius:2},
+      spotLine(labels,d.spot)]},options:baseOpts()});
+
+  const exps=Object.keys(d.net_gex_by_expiry);
+  mk('expChart',{data:{labels:exps,datasets:[{type:'bar',label:'Net GEX',data:exps.map(e=>d.net_gex_by_expiry[e]),backgroundColor:exps.map(e=>d.net_gex_by_expiry[e]>=0?'rgba(22,216,136,.6)':'rgba(255,77,103,.6)'),borderRadius:3}]},options:baseOpts()});
+
+  renderTable(d,strikes);
+}
+
+function renderTable(d,strikes){
+  let rows=strikes.map(k=>({k:+k,g:d.gex_by_strike[String(k)]||0,dx:d.dex_by_strike[String(k)]||0,vx:d.vex_by_strike[String(k)]||0,th:d.theta_by_strike[String(k)]||0,iv:(d.iv_by_strike[String(k)]||0)*100,v:d.volume_by_strike[String(k)]||0,oi:d.oi_by_strike[String(k)]||0}));
+  rows.sort((a,b)=>((a[sortKey]>b[sortKey])?-sortDir*-1*-1:a[sortKey]<b[sortKey]?-1:1)* -1*sortDir*0 + ((a[sortKey]-b[sortKey])*sortDir));
+  document.querySelector('#tbl tbody').innerHTML=rows.slice(0,40).map(r=>`<tr><td><b>${r.k}</b> ${r.k===d.spot?'<span class="gold">◈</span>':''}${r.k==d.call_wall?' <span class="pill c">CW</span>':''}${r.k==d.put_wall?' <span class="pill p">PW</span>':''}</td><td class="${cls(r.g)}">${fmt(r.g)}</td><td>${fmt(r.dx)}</td><td>${fmt(r.vx)}</td><td>${fmt(r.th)}</td><td class="purp">${r.iv.toFixed(1)}%</td><td>${fmt(r.v)}</td><td><b>${fmt(r.oi)}</b></td></tr>`).join('');
+}
+
+document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.k;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=-1;}
+  if(DATA&&CUR)renderTable(DATA.tickers[CUR],Object.keys(DATA.tickers[CUR].gex_by_strike).map(Number).sort((a,b)=>a-b));
+});
+
+load();setInterval(load,30000);
 </script>
 </body>
 </html>
